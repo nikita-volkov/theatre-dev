@@ -24,18 +24,27 @@ import TheatreDev.Prelude
 newtype Actor msg
   = Actor (msg -> IO ())
 
+-- |
+-- Distributes the message across the merged actors.
 instance Semigroup (Actor msg) where
   Actor lTell <> Actor rTell =
     Actor $ \msg -> lTell msg >> rTell msg
 
+-- |
+-- Provides an identity for merging the actors,
+-- which does nothing.
 instance Monoid (Actor msg) where
   mempty =
     Actor (const (return ()))
 
+-- |
+-- Maps the input message to a different type.
 instance Contravariant Actor where
   contramap fn (Actor tell) =
     Actor (tell . fn)
 
+-- |
+-- Splits the message between actors.
 instance Divisible Actor where
   conquer =
     mempty
@@ -43,6 +52,8 @@ instance Divisible Actor where
     Actor $ \msg -> case divisor msg of
       (lMsg, rMsg) -> lTell lMsg >> rTell rMsg
 
+-- |
+-- Provides a choice between alternative actors to process the message.
 instance Decidable Actor where
   lose fn =
     Actor $ const $ return ()
@@ -50,10 +61,16 @@ instance Decidable Actor where
     Actor $ either lTell rTell . decider
 
 spawn ::
-  -- | Initial state.
+  -- |
+  -- Initial state.
   state ->
-  -- | Process the next message updating the state.
+  -- |
+  -- Process the next message updating the state.
+  -- The IO action must not throw any exceptions.
   (state -> msg -> IO state) ->
+  -- |
+  -- Action forking a thread to run the actor loop and
+  -- producing a handle for sending messages to it.
   IO (Actor msg)
 spawn state process = do
   (inChan, outChan) <- Unagi.newChan
