@@ -18,32 +18,32 @@ import qualified Control.Concurrent.Chan.Unagi as Unagi
 import TheatreDev.Prelude
 
 -- |
--- Actor, which processes the messages of type @event@.
+-- Actor, which processes the messages of type @msg@.
 --
 -- Provides abstraction over the communication channel and threads.
-newtype Actor event
-  = Actor (event -> IO ())
+newtype Actor msg
+  = Actor (msg -> IO ())
 
-instance Semigroup (Actor event) where
+instance Semigroup (Actor msg) where
   Actor lTell <> Actor rTell =
-    Actor $ \event -> lTell event >> rTell event
+    Actor $ \msg -> lTell msg >> rTell msg
 
-instance Monoid (Actor event) where
+instance Monoid (Actor msg) where
   mempty =
     Actor (const (return ()))
 
 spawn ::
   -- | Initial state.
   state ->
-  -- | Process the next event updating the state.
-  (state -> event -> IO state) ->
-  IO (Actor event)
+  -- | Process the next message updating the state.
+  (state -> msg -> IO state) ->
+  IO (Actor msg)
 spawn state process = do
   (inChan, outChan) <- Unagi.newChan
   forkIO $
     let loop !state = do
-          event <- Unagi.readChan outChan
-          state <- process state event
+          msg <- Unagi.readChan outChan
+          state <- process state msg
           loop state
      in loop state
   return $ Actor $ Unagi.writeChan inChan
@@ -51,5 +51,5 @@ spawn state process = do
 -- |
 -- Schedule a message for the actor to process
 -- after the ones already scheduled.
-tell :: Actor event -> event -> IO ()
+tell :: Actor msg -> msg -> IO ()
 tell = coerce
