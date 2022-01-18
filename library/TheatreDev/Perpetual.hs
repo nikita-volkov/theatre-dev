@@ -32,6 +32,23 @@ instance Monoid (Actor msg) where
   mempty =
     Actor (const (return ()))
 
+instance Contravariant Actor where
+  contramap fn (Actor tell) =
+    Actor (tell . fn)
+
+instance Divisible Actor where
+  conquer =
+    mempty
+  divide divisor (Actor lTell) (Actor rTell) =
+    Actor $ \msg -> case divisor msg of
+      (lMsg, rMsg) -> lTell lMsg >> rTell rMsg
+
+instance Decidable Actor where
+  lose fn =
+    Actor $ const $ return ()
+  choose decider (Actor lTell) (Actor rTell) =
+    Actor $ either lTell rTell . decider
+
 spawn ::
   -- | Initial state.
   state ->
