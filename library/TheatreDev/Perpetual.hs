@@ -36,8 +36,8 @@ instance Semigroup (Actor msg) where
 -- Provides an identity for merging the actors,
 -- which does nothing.
 instance Monoid (Actor msg) where
-  mempty =
-    Actor (const (return ()))
+  mempty = Actor (const (return ()))
+  mconcat actors = Actor $ \msg -> forM_ actors $ \(Actor tell) -> tell msg
 
 -- |
 -- Maps the input message to a different type.
