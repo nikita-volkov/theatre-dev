@@ -29,6 +29,8 @@ newtype Actor msg
 instance Semigroup (Actor msg) where
   Actor lTell <> Actor rTell =
     Actor $ \msg -> lTell msg >> rTell msg
+  sconcat actors = Actor $ \msg -> forM_ actors $ \(Actor tell) -> tell msg
+  stimes n (Actor tell) = Actor $ \msg -> replicateM_ (fromIntegral n) $ tell msg
 
 -- |
 -- Provides an identity for merging the actors,

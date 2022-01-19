@@ -34,11 +34,12 @@ import Data.Ix as Exports
 import Data.List as Exports hiding (all, and, any, concat, concatMap, elem, find, foldl, foldl', foldl1, foldr, foldr1, isSubsequenceOf, mapAccumL, mapAccumR, maximum, maximumBy, minimum, minimumBy, notElem, or, product, sortOn, sum, uncons)
 import Data.List.NonEmpty as Exports (NonEmpty (..))
 import Data.Maybe as Exports
-import Data.Monoid as Exports hiding (Alt)
+import Data.Monoid as Exports hiding (Alt, First (..), Last (..))
 import Data.Ord as Exports
 import Data.Proxy as Exports
 import Data.Ratio as Exports
 import Data.STRef as Exports
+import Data.Semigroup as Exports
 import Data.String as Exports
 import Data.Traversable as Exports
 import Data.Tuple as Exports
