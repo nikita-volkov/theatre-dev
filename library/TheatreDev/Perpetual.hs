@@ -62,6 +62,10 @@ instance Decidable Actor where
   choose decider (Actor lTell) (Actor rTell) =
     Actor $ either lTell rTell . decider
 
+roundRobin :: [Actor msg] -> Actor msg
+roundRobin =
+  error "TODO"
+
 spawn ::
   -- |
   -- Initial state.
