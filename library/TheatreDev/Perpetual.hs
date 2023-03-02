@@ -6,7 +6,6 @@
 -- are expected not to need more.
 module TheatreDev.Perpetual
   ( Actor,
-    roundRobin,
     spawn,
     tell,
   )
@@ -59,10 +58,6 @@ instance Decidable Actor where
     Actor $ const $ return ()
   choose decider (Actor lTell) (Actor rTell) =
     Actor $ either lTell rTell . decider
-
-roundRobin :: [Actor msg] -> Actor msg
-roundRobin =
-  error "TODO"
 
 spawn ::
   -- |
