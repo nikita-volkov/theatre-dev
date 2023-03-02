@@ -6,6 +6,7 @@
 -- are expected not to need more.
 module TheatreDev.Perpetual
   ( Actor,
+    roundRobin,
     spawn,
     tell,
   )
@@ -54,7 +55,7 @@ instance Divisible Actor where
 -- |
 -- Provides a choice between alternative actors to process the message.
 instance Decidable Actor where
-  lose fn =
+  lose _ =
     Actor $ const $ return ()
   choose decider (Actor lTell) (Actor rTell) =
     Actor $ either lTell rTell . decider
