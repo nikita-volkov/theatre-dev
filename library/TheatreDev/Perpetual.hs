@@ -5,10 +5,7 @@
 -- This limitation provides for simpler API and most apps
 -- are expected not to need more.
 module TheatreDev.Perpetual
-  ( -- *
-    Actor,
-
-    -- **
+  ( Actor,
     spawn,
     tell,
   )
