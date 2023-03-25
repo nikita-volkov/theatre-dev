@@ -93,13 +93,19 @@ spawnStateless interpretMessage cleanUp =
               case message of
                 Just payload ->
                   do
-                    interpretMessage payload
-                    loop
+                    res <- try @SomeException $ interpretMessage payload
+                    case res of
+                      Right () -> loop
+                      Left exc ->
+                        do
+                          cleanUp
+                          putMVar lock ()
+                          throwTo spawningThreadId exc
                 Nothing ->
                   do
                     cleanUp
                     putMVar lock ()
-       in catch @SomeException loop $ throwTo spawningThreadId
+       in loop
     return
       ( Actor
           (E.writeChan inChan . Just)
