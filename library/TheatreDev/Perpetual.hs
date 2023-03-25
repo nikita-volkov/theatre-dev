@@ -6,7 +6,8 @@
 -- are expected not to need more.
 module TheatreDev.Perpetual
   ( Actor,
-    spawn,
+    spawnStateless,
+    spawnStateful,
     tell,
   )
 where
@@ -59,7 +60,26 @@ instance Decidable Actor where
   choose decider (Actor lTell) (Actor rTell) =
     Actor $ either lTell rTell . decider
 
-spawn ::
+spawnStateless ::
+  -- |
+  -- Process the next message.
+  -- Must not throw any exceptions.
+  (msg -> IO ()) ->
+  -- |
+  -- Action forking a thread to run the actor loop and
+  -- producing a handle for sending messages to it.
+  IO (Actor msg)
+spawnStateless process = do
+  (inChan, outChan) <- Unagi.newChan
+  forkIO $
+    let loop = do
+          msg <- Unagi.readChan outChan
+          process msg
+          loop
+     in loop
+  return $ Actor $ Unagi.writeChan inChan
+
+spawnStateful ::
   -- |
   -- Initial state.
   state ->
@@ -71,7 +91,7 @@ spawn ::
   -- Action forking a thread to run the actor loop and
   -- producing a handle for sending messages to it.
   IO (Actor msg)
-spawn state process = do
+spawnStateful state process = do
   (inChan, outChan) <- Unagi.newChan
   forkIO $
     let loop !state = do
