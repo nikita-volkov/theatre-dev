@@ -84,20 +84,22 @@ spawnStateless interpretMessage cleanUp =
   do
     (inChan, outChan) <- E.newChan
     lock <- newEmptyMVar
-    F.fork $
-      fix $ \loop ->
-        {-# SCC "spawnStateless/loop" #-}
-        do
-          message <- E.readChan outChan
-          case message of
-            Just payload ->
-              do
-                interpretMessage payload
-                loop
-            Nothing ->
-              do
-                cleanUp
-                putMVar lock ()
+    spawningThreadId <- myThreadId
+    forkIO $
+      let loop =
+            {-# SCC "spawnStateless/loop" #-}
+            do
+              message <- E.readChan outChan
+              case message of
+                Just payload ->
+                  do
+                    interpretMessage payload
+                    loop
+                Nothing ->
+                  do
+                    cleanUp
+                    putMVar lock ()
+       in catch @SomeException loop $ throwTo spawningThreadId
     return
       ( Actor
           (E.writeChan inChan . Just)

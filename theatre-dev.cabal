@@ -59,6 +59,7 @@ common base
     StandaloneDeriving
     TemplateHaskell
     TupleSections
+    TypeApplications
     TypeFamilies
     TypeOperators
     UnboxedTuples
