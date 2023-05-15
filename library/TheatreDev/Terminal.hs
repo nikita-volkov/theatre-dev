@@ -1,7 +1,10 @@
 module TheatreDev.Terminal
   ( Actor,
 
-    -- * Construction
+    -- * Manipulation
+    batchify,
+
+    -- * Acquisition
     spawnStateless,
     spawnStateful,
 
@@ -64,6 +67,12 @@ instance Decidable Actor where
       tell = either lTell rTell . choice
       kill = lKill >> rKill
       wait = lWait >> rWait
+
+-- |
+-- Adapt the actor to be able to receive lists of messages.
+batchify :: Actor message -> Actor [message]
+batchify Actor {..} =
+  Actor (traverse_ tell) kill wait
 
 -- |
 -- An actor which cannot die by itself unless explicitly killed.
