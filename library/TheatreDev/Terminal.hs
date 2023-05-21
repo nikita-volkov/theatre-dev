@@ -156,3 +156,7 @@ spawnStateful state progress finalise =
           (E.writeChan inChan Nothing)
           (takeMVar lock)
       )
+
+spawnStatefulBatched :: state -> (state -> NonEmpty message -> IO state) -> (state -> IO ()) -> IO (Actor message)
+spawnStatefulBatched =
+  error "TODO"
