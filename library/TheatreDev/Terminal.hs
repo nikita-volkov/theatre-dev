@@ -72,7 +72,8 @@ instance Decidable Actor where
 -- Adapt the actor to be able to receive lists of messages.
 batchify :: Actor message -> Actor [message]
 batchify Actor {..} =
-  Actor (traverse_ tell) kill wait
+  case traverse_ tell of
+    tell -> Actor {..}
 
 -- |
 -- An actor which cannot die by itself unless explicitly killed.
