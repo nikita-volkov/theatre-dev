@@ -71,7 +71,7 @@ library
   hs-source-dirs:  library
   exposed-modules:
     TheatreDev.Perpetual
-    TheatreDev.Terminal
+    TheatreDev.Terminal.Actor
 
   other-modules:
     TheatreDev.ExtrasFor.List

@@ -1,15 +1,15 @@
-module TheatreDev.Terminal
+module TheatreDev.Terminal.Actor
   ( Actor,
 
     -- * Manipulation
     batchify,
 
     -- * Acquisition
-    spawnStateless,
-    spawnStateful,
+    spawnStatelessGranular,
+    spawnStatefulGranular,
     spawnStatefulBatched,
 
-    -- * Usage
+    -- * Control
     tell,
     kill,
     wait,
@@ -72,36 +72,37 @@ instance Decidable Actor where
       kill = lKill >> rKill
       wait = lWait >> rWait
 
--- |
--- Adapt the actor to be able to receive lists of messages.
-batchify :: Actor message -> Actor [message]
-batchify Actor {..} =
-  case traverse_ tell of
-    tell -> Actor {..}
+-- | Distribute the message across the available actors.
+--
+-- Allows to control the concurrency nicely.
+-- The message will be delivered to the first available actor.
+pool :: [IO (Actor message)] -> IO (Actor message)
+pool =
+  error "TODO"
 
 -- |
--- An actor which cannot die by itself unless explicitly killed.
---
 -- Given an interpreter of messages,
--- forks a thread to run the computation on and
--- produces a handle to address that actor.
+-- fork a thread to run the handler daemon on and
+-- produce a handle to control that actor.
 --
 -- Killing that actor will make it process all the messages in the queue first.
 -- All the messages sent to it after killing won't be processed.
-spawnStateless ::
-  -- | Interpreter of a message
+spawnStatelessGranular ::
+  -- | Interpreter of a message.
   (message -> IO ()) ->
-  -- | Clean up when killed
+  -- | Clean up when killed.
   IO () ->
+  -- | Fork a thread to run the handler daemon on and
+  -- produce a handle to control it.
   IO (Actor message)
-spawnStateless interpretMessage cleanUp =
+spawnStatelessGranular interpretMessage cleanUp =
   do
     (inChan, outChan) <- E.newChan
     lock <- newEmptyMVar
     spawningThreadId <- myThreadId
     forkIO
       $ let loop =
-              {-# SCC "spawnStateless/loop" #-}
+              {-# SCC "spawnStatelessGranular/loop" #-}
               do
                 message <- E.readChan outChan
                 case message of
@@ -138,8 +139,8 @@ spawnStateless interpretMessage cleanUp =
 --
 -- Killing that actor will make it process all the messages in the queue first.
 -- All the messages sent to it after killing won't be processed.
-spawnStateful :: state -> (state -> message -> IO state) -> (state -> IO ()) -> IO (Actor message)
-spawnStateful zero step finalizer =
+spawnStatefulGranular :: state -> (state -> message -> IO state) -> (state -> IO ()) -> IO (Actor message)
+spawnStatefulGranular zero step finalizer =
   spawnStatefulBatched zero newStep finalizer
   where
     newStep =
