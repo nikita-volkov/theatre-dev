@@ -77,7 +77,7 @@ library
     TheatreDev.ExtrasFor.List
     TheatreDev.ExtrasFor.TBQueue
     TheatreDev.Prelude
-    TheatreDev.StatefulActorSpec
+    TheatreDev.Terminal.StatefulActorSpec
 
   build-depends:
     , async >=2.2 && <3

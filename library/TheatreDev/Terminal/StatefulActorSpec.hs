@@ -1,4 +1,4 @@
-module TheatreDev.StatefulActorSpec where
+module TheatreDev.Terminal.StatefulActorSpec where
 
 import TheatreDev.Prelude
 
