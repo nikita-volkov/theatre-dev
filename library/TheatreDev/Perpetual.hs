@@ -71,12 +71,12 @@ spawnStateless ::
   IO (Actor msg)
 spawnStateless process = do
   (inChan, outChan) <- Unagi.newChan
-  forkIO $
-    let loop = do
-          msg <- Unagi.readChan outChan
-          process msg
-          loop
-     in loop
+  forkIO
+    $ let loop = do
+            msg <- Unagi.readChan outChan
+            process msg
+            loop
+       in loop
   return $ Actor $ Unagi.writeChan inChan
 
 spawnStateful ::
@@ -93,12 +93,12 @@ spawnStateful ::
   IO (Actor msg)
 spawnStateful state process = do
   (inChan, outChan) <- Unagi.newChan
-  forkIO $
-    let loop !state = do
-          msg <- Unagi.readChan outChan
-          state <- process state msg
-          loop state
-     in loop state
+  forkIO
+    $ let loop !state = do
+            msg <- Unagi.readChan outChan
+            state <- process state msg
+            loop state
+       in loop state
   return $ Actor $ Unagi.writeChan inChan
 
 -- |
