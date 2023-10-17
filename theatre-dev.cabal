@@ -27,6 +27,7 @@ common base
   default-extensions:
     NoImplicitPrelude
     NoMonomorphismRestriction
+    ApplicativeDo
     Arrows
     BangPatterns
     ConstraintKinds
@@ -48,6 +49,7 @@ common base
     MagicHash
     MultiParamTypeClasses
     MultiWayIf
+    NamedFieldPuns
     OverloadedStrings
     ParallelListComp
     PatternGuards
@@ -75,8 +77,10 @@ library
     TheatreDev.ExtrasFor.List
     TheatreDev.ExtrasFor.TBQueue
     TheatreDev.Prelude
+    TheatreDev.StatefulActorSpec
 
   build-depends:
+    , async >=2.2 && <3
     , base >=4.9 && <5
     , contravariant >=1.3 && <2
     , stm >=2.5 && <3
