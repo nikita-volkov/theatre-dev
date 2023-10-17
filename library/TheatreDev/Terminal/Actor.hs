@@ -2,7 +2,7 @@ module TheatreDev.Terminal.Actor
   ( Actor,
 
     -- * Manipulation
-    batchify,
+    adaptToList,
 
     -- * Acquisition
     spawnStatelessGranular,
@@ -72,13 +72,12 @@ instance Decidable Actor where
       kill = lKill >> rKill
       wait = lWait >> rWait
 
--- | Distribute the message across the available actors.
---
--- Allows to control the concurrency nicely.
--- The message will be delivered to the first available actor.
-pool :: [IO (Actor message)] -> IO (Actor message)
-pool =
-  error "TODO"
+-- |
+-- Adapt the actor to be able to receive lists of messages.
+adaptToList :: Actor message -> Actor [message]
+adaptToList Actor {..} =
+  case traverse_ tell of
+    tell -> Actor {..}
 
 -- |
 -- Given an interpreter of messages,
