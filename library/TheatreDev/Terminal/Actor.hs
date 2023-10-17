@@ -24,9 +24,9 @@ import TheatreDev.ExtrasFor.TBQueue
 import TheatreDev.Prelude
 
 -- |
--- Actor, which processes the messages of type @message@.
+-- Controls of an actor, which processes the messages of type @message@.
 --
--- An abstraction over the message channel, thread-forking and killing.
+-- Abstraction over the message channel, thread-forking and killing.
 data Actor message = Actor
   { -- | Send a message to the actor.
     tell :: message -> IO (),
