@@ -7,6 +7,8 @@ module TheatreDev.StmBased
     -- * Acquisition
     spawnStatefulIndividual,
     spawnStatefulBatched,
+    spawnStatelessIndividual,
+    spawnStatelessBatched,
 
     -- * Control
     tell,
@@ -76,7 +78,79 @@ instance Decidable Actor where
 
 -- * Acquisition
 
-spawnStatefulIndividual :: state -> (state -> message -> IO state) -> (state -> IO ()) -> IO (Actor message)
+-- |
+-- Given an interpreter of messages,
+-- fork a thread to run the handler daemon on and
+-- produce a handle to control that actor.
+--
+-- Killing that actor will make it process all the messages in the queue first.
+-- All the messages sent to it after killing won't be processed.
+spawnStatelessIndividual ::
+  -- | Interpreter of a message.
+  (message -> IO ()) ->
+  -- | Clean up when killed.
+  IO () ->
+  -- | Fork a thread to run the handler daemon on and
+  -- produce a handle to control it.
+  IO (Actor message)
+spawnStatelessIndividual handler cleanUp =
+  do
+    queue <- newTBQueueIO 1000
+    aliveVar <- newTVarIO True
+    resVar <- newEmptyTMVarIO @(Maybe SomeException)
+    forkIOWithUnmask $ \unmask ->
+      let loop =
+            join $ atomically $ do
+              message <- readTBQueue queue
+              case message of
+                Just message -> return $ do
+                  result <- try @SomeException $ unmask $ handler message
+                  case result of
+                    Right () ->
+                      loop
+                    Left exception -> do
+                      atomically $ do
+                        flushTBQueue queue
+                        writeTVar aliveVar False
+                        putTMVar resVar (Just exception)
+                      cleanUp
+                Nothing -> do
+                  flushTBQueue queue
+                  writeTVar aliveVar False
+                  putTMVar resVar Nothing
+                  return $ cleanUp
+       in loop
+    return
+      Actor
+        { tell = \message -> do
+            alive <- readTVar aliveVar
+            when alive
+              $ writeTBQueue queue
+              $ Just message,
+          kill = do
+            alive <- readTVar aliveVar
+            when alive
+              $ writeTBQueue queue Nothing,
+          wait = readTMVar resVar
+        }
+
+spawnStatelessBatched ::
+  -- | Interpreter of a batch of messages.
+  (NonEmpty message -> IO ()) ->
+  -- | Clean up when killed.
+  IO () ->
+  -- | Fork a thread to run the handler daemon on and
+  -- produce a handle to control it.
+  IO (Actor message)
+spawnStatelessBatched interpreter cleaner =
+  -- TODO: Optimize by reimplementing directly.
+  spawnStatefulBatched () (const interpreter) (const cleaner)
+
+spawnStatefulIndividual ::
+  state ->
+  (state -> message -> IO state) ->
+  (state -> IO ()) ->
+  IO (Actor message)
 spawnStatefulIndividual zero step finalizer =
   do
     queue <- newTBQueueIO 1000
