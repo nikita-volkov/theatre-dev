@@ -8,6 +8,7 @@ description:
   Don\'t expect this lib to maintain a stable API.
   Once clearly useful abstractions emerge, they'll be moved to the
   \"theatre\" lib.
+  The namespace "TheatreDev.*" implies the name of an experimental API.
 
 stability:     experimental
 homepage:      https://github.com/nikita-volkov/theatre-dev
