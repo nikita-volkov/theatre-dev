@@ -26,6 +26,7 @@ import Control.Concurrent.STM.TMVar
 import qualified TheatreDev.ExtrasFor.List as List
 import TheatreDev.ExtrasFor.TBQueue
 import TheatreDev.Prelude
+import qualified TheatreDev.StmBased.Wait as Wait
 
 -- |
 -- Controls of an actor, which processes the messages of type @message@.
@@ -46,7 +47,7 @@ instance Semigroup (Actor message) where
     where
       tell msg = lTell msg >> rTell msg
       kill = lKill >> rKill
-      wait = (<|>) <$> lWait <*> rWait
+      wait = Wait.both lWait rWait
 
 instance Monoid (Actor message) where
   mempty =
@@ -64,7 +65,7 @@ instance Divisible Actor where
     where
       tell msg = case divisor msg of (lMsg, rMsg) -> lTell lMsg >> rTell rMsg
       kill = lKill >> rKill
-      wait = (<|>) <$> lWait <*> rWait
+      wait = Wait.both lWait rWait
 
 instance Decidable Actor where
   lose fn =
@@ -74,7 +75,36 @@ instance Decidable Actor where
     where
       tell = either lTell rTell . choice
       kill = lKill >> rKill
-      wait = (<|>) <$> lWait <*> rWait
+      wait = Wait.both lWait rWait
+
+-- * Composition
+
+-- | Distribute the message across the available actors.
+-- The message will be delivered to the first available actor.
+--
+-- Using this combinator in combination with 'replicateM' and some spawner,
+-- you can construct pools.
+oneOf :: [Actor message] -> Actor message
+oneOf actors =
+  Actor {tell, kill, wait}
+  where
+    tell msg =
+      asum (fmap (($ msg) . (.tell)) actors)
+    kill =
+      traverse_ (.kill) actors
+    wait =
+      Wait.all (fmap (.wait) actors)
+
+allOf :: [Actor message] -> Actor message
+allOf actors =
+  Actor {tell, kill, wait}
+  where
+    tell msg =
+      forM_ actors $ \actor -> actor.tell msg
+    kill =
+      traverse_ (.kill) actors
+    wait =
+      Wait.all (fmap (.wait) actors)
 
 -- * Acquisition
 
@@ -259,32 +289,3 @@ kill actor =
 wait :: Actor message -> IO ()
 wait actor =
   atomically actor.wait >>= maybe (pure ()) throwIO
-
--- * Composition
-
--- | Distribute the message across the available actors.
--- The message will be delivered to the first available actor.
---
--- Using this combinator in combination with 'replicateM' and some spawner,
--- you can construct pools.
-oneOf :: [Actor message] -> Actor message
-oneOf actors =
-  Actor {tell, kill, wait}
-  where
-    tell msg =
-      asum (fmap (($ msg) . (.tell)) actors)
-    kill =
-      traverse_ (.kill) actors
-    wait =
-      fmap asum (traverse (.wait) actors)
-
-allOf :: [Actor message] -> Actor message
-allOf actors =
-  Actor {tell, kill, wait}
-  where
-    tell msg =
-      forM_ actors $ \actor -> actor.tell msg
-    kill =
-      traverse_ (.kill) actors
-    wait =
-      fmap asum (traverse (.wait) actors)
