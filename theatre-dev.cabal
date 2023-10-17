@@ -51,6 +51,7 @@ common base
     MultiParamTypeClasses
     MultiWayIf
     NamedFieldPuns
+    OverloadedRecordDot
     OverloadedStrings
     ParallelListComp
     PatternGuards
@@ -72,6 +73,7 @@ library
   hs-source-dirs:  library
   exposed-modules:
     TheatreDev.Perpetual
+    TheatreDev.StmBased
     TheatreDev.Terminal.Actor
 
   other-modules:
