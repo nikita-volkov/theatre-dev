@@ -139,36 +139,11 @@ spawnStateless interpretMessage cleanUp =
 -- Killing that actor will make it process all the messages in the queue first.
 -- All the messages sent to it after killing won't be processed.
 spawnStateful :: state -> (state -> message -> IO state) -> (state -> IO ()) -> IO (Actor message)
-spawnStateful state progress finalize =
-  do
-    (inChan, outChan) <- E.newChan
-    lock <- newEmptyMVar
-    forkIOWithUnmask $ \unmask ->
-      let {-# SCC loop #-}
-          loop !state = do
-            message <- E.readChan outChan
-            case message of
-              Just message -> do
-                progressResult <- try $ unmask $ progress state message
-                case progressResult of
-                  Right progressResult -> loop state
-                  Left exc -> do
-                    try @SomeException $ unmask $ finalize state
-                    putMVar lock $ Just exc
-              Nothing -> do
-                exc <- try @SomeException $ unmask $ finalize state
-                case exc of
-                  Right () -> do
-                    putMVar lock Nothing
-                  Left exc -> do
-                    putMVar lock $ Just exc
-       in loop state
-    return
-      ( Actor
-          (E.writeChan inChan . Just)
-          (E.writeChan inChan Nothing)
-          (takeMVar lock >>= maybe (return ()) throwIO)
-      )
+spawnStateful zero step finalizer =
+  spawnStatefulBatched zero newStep finalizer
+  where
+    newStep =
+      foldM step
 
 spawnStatefulBatched :: state -> (state -> NonEmpty message -> IO state) -> (state -> IO ()) -> IO (Actor message)
 spawnStatefulBatched zero step finalizer =
