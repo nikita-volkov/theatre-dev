@@ -213,7 +213,10 @@ spawnStatefulBatched zero step finalizer =
             when alive
               $ writeTBQueue queue
               $ Just message,
-          kill = atomically $ writeTBQueue queue Nothing,
+          kill = atomically $ do
+            alive <- readTVar aliveVar
+            when alive
+              $ writeTBQueue queue Nothing,
           wait = do
             res <- atomically $ takeTMVar resVar
             case res of
