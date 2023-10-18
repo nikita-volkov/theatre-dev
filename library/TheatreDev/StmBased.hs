@@ -29,6 +29,9 @@ import qualified TheatreDev.StmBased.Wait as Wait
 -- Controls of an actor, which processes the messages of type @message@.
 --
 -- Provides abstraction over the message channel, thread-forking and killing.
+--
+-- Monoid instance is not provided for the same reason it is not provided for numbers.
+-- This type supports both sum and product composition. See 'allOf' and 'oneOf'.
 data Actor message = Actor
   { -- | Send a message to the actor.
     tell :: message -> STM (),
@@ -38,25 +41,13 @@ data Actor message = Actor
     wait :: STM (Maybe SomeException)
   }
 
-instance Semigroup (Actor message) where
-  (<>) (Actor lTell lKill lWait) (Actor rTell rKill rWait) =
-    Actor tell kill wait
-    where
-      tell msg = lTell msg >> rTell msg
-      kill = lKill >> rKill
-      wait = Wait.both lWait rWait
-
-instance Monoid (Actor message) where
-  mempty =
-    Actor (const (return ())) (return ()) (return Nothing)
-
 instance Contravariant Actor where
   contramap fn (Actor tell kill wait) =
     Actor (tell . fn) kill wait
 
 instance Divisible Actor where
   conquer =
-    mempty
+    Actor (const (return ())) (return ()) (return Nothing)
   divide divisor (Actor lTell lKill lWait) (Actor rTell rKill rWait) =
     Actor tell kill wait
     where
