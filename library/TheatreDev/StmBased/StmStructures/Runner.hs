@@ -61,7 +61,6 @@ receiveSingle Runner {..} =
     case message of
       Just message -> return (Just message)
       Nothing -> do
-        flushTBQueue queue
         writeTVar aliveVar False
         putTMVar resVar Nothing
         return Nothing
@@ -78,7 +77,7 @@ receiveMultiple Runner {..} =
       -- because we have at least one element.
       -- And that it starts with a Nothing.
       [] -> do
-        unGetTBQueue queue Nothing
+        forM_ remainingCommands $ unGetTBQueue queue
         writeTVar aliveVar False
         putTMVar resVar Nothing
         return []
