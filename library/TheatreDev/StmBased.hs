@@ -84,11 +84,15 @@ fromRunner runner =
       wait = Runner.wait runner
     }
 
--- | Distribute the message across the available actors.
--- The message will be delivered to the first available actor.
+-- | Distribute the message stream across actors.
+-- The message gets delivered to the first available one.
 --
--- Using this combinator in combination with 'replicateM' and some spawner,
--- you can construct pools.
+-- E.g., using this combinator in combination with 'replicateM'
+-- you can construct pools:
+--
+-- > spawnPool :: Int -> IO (Actor message) -> IO (Actor message)
+-- > spawnPool size spawn =
+-- >   oneOf <$> replicateM size spawn
 oneOf :: [Actor message] -> Actor message
 oneOf actors =
   Actor {tell, kill, wait}
