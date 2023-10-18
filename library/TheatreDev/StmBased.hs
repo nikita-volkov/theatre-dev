@@ -179,7 +179,7 @@ spawnStatefulBatched zero step finalizer =
       let loop !state =
             do
               messages <- atomically $ Runner.receiveMultiple runner
-              case nonEmpty messages of
+              case messages of
                 Just nonEmptyMessages ->
                   do
                     result <- try @SomeException $ unmask $ step state nonEmptyMessages

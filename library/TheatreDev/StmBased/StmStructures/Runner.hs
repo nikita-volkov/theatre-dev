@@ -65,7 +65,9 @@ receiveSingle Runner {..} =
         putTMVar resVar Nothing
         return Nothing
 
-receiveMultiple :: Runner a -> STM [a]
+receiveMultiple ::
+  Runner a ->
+  STM (Maybe (NonEmpty a))
 receiveMultiple Runner {..} =
   do
     (messages, remainingCommands) <- do
@@ -80,11 +82,11 @@ receiveMultiple Runner {..} =
         forM_ remainingCommands $ unGetTBQueue queue
         writeTVar aliveVar False
         putTMVar resVar Nothing
-        return []
-      _ -> do
+        return Nothing
+      messagesHead : messagesTail -> do
         unless (null remainingCommands)
           $ unGetTBQueue queue Nothing
-        return messages
+        return $ Just $ messagesHead :| messagesTail
 
 releaseWithException :: Runner a -> SomeException -> STM ()
 releaseWithException Runner {..} exception =
