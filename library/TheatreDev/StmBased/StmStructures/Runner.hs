@@ -69,19 +69,22 @@ receiveSingle Runner {..} =
 receiveMultiple :: Runner a -> STM [a]
 receiveMultiple Runner {..} =
   do
-    messages <- do
+    (messages, remainingCommands) <- do
       head <- readTBQueue queue
       tail <- flushTBQueue queue
-      return $ fst $ List.splitWhileJust $ head : tail
+      return $ List.splitWhileJust $ head : tail
     case messages of
-      -- Implies that the tail is not empty.
+      -- Implies that the tail is not empty,
+      -- because we have at least one element.
       -- And that it starts with a Nothing.
       [] -> do
+        unGetTBQueue queue Nothing
         writeTVar aliveVar False
         putTMVar resVar Nothing
         return []
       _ -> do
-        unGetTBQueue queue Nothing
+        unless (null remainingCommands)
+          $ unGetTBQueue queue Nothing
         return messages
 
 releaseWithException :: Runner a -> SomeException -> STM ()
