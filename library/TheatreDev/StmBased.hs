@@ -93,6 +93,8 @@ fromRunner runner =
 -- > spawnPool :: Int -> IO (Actor message) -> IO (Actor message)
 -- > spawnPool size spawn =
 -- >   oneOf <$> replicateM size spawn
+--
+-- You can consider this being an interface to the Sum monoid.
 oneOf :: [Actor message] -> Actor message
 oneOf actors =
   Actor {tell, kill, wait}
@@ -104,6 +106,9 @@ oneOf actors =
     wait =
       Wait.all (fmap (.wait) actors)
 
+-- |
+--
+-- You can consider this being an interface to the Product monoid.
 allOf :: [Actor message] -> Actor message
 allOf actors =
   Actor {tell, kill, wait}
