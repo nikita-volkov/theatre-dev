@@ -172,27 +172,31 @@ spawnStatefulIndividual zero step finalizer =
        in loop zero
     return $ fromRunner runner
 
-spawnStatefulBatched :: state -> (state -> NonEmpty message -> IO state) -> (state -> IO ()) -> IO (Actor message)
+spawnStatefulBatched ::
+  state ->
+  (state -> NonEmpty message -> IO state) ->
+  (state -> IO ()) ->
+  IO (Actor message)
 spawnStatefulBatched zero step finalizer =
   do
     runner <- atomically Runner.start
     forkIOWithUnmask $ \unmask ->
       let loop !state =
             do
-              messages <- atomically $ Runner.receiveMultiple runner
+              messages <- fmap nonEmpty $ atomically $ Runner.receiveMultiple runner
               case messages of
-                messagesHead : messagesTail ->
+                Just nonEmptyMessages ->
                   do
-                    let nonEmptyMessages = messagesHead :| messagesTail
                     result <- try @SomeException $ unmask $ step state nonEmptyMessages
                     case result of
                       Right newState ->
                         loop newState
-                      Left exception -> do
-                        atomically $ Runner.releaseWithException runner exception
-                        finalizer state
+                      Left exception ->
+                        do
+                          atomically $ Runner.releaseWithException runner exception
+                          finalizer state
                 -- Empty batch means that the runner is finished.
-                [] -> finalizer state
+                Nothing -> finalizer state
        in loop zero
     return $ fromRunner runner
 
