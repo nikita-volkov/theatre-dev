@@ -21,11 +21,8 @@ module TheatreDev.StmBased
   )
 where
 
-import Control.Concurrent.STM.TBQueue
-import Control.Concurrent.STM.TMVar
-import qualified TheatreDev.ExtrasFor.List as List
-import TheatreDev.ExtrasFor.TBQueue
 import TheatreDev.Prelude
+import qualified TheatreDev.StmBased.StmStructures.Runner as Runner
 import qualified TheatreDev.StmBased.Wait as Wait
 
 -- |
@@ -79,6 +76,14 @@ instance Decidable Actor where
 
 -- * Composition
 
+fromRunner :: Runner.Runner a -> Actor a
+fromRunner runner =
+  Actor
+    { tell = Runner.tell runner,
+      kill = Runner.kill runner,
+      wait = Runner.wait runner
+    }
+
 -- | Distribute the message across the available actors.
 -- The message will be delivered to the first available actor.
 --
@@ -123,46 +128,9 @@ spawnStatelessIndividual ::
   -- | Fork a thread to run the handler daemon on and
   -- produce a handle to control it.
   IO (Actor message)
-spawnStatelessIndividual handler cleanUp =
-  do
-    queue <- newTBQueueIO 1000
-    aliveVar <- newTVarIO True
-    resVar <- newEmptyTMVarIO @(Maybe SomeException)
-    forkIOWithUnmask $ \unmask ->
-      let loop =
-            join $ atomically $ do
-              message <- readTBQueue queue
-              case message of
-                Just message -> return $ do
-                  result <- try @SomeException $ unmask $ handler message
-                  case result of
-                    Right () ->
-                      loop
-                    Left exception -> do
-                      atomically $ do
-                        flushTBQueue queue
-                        writeTVar aliveVar False
-                        putTMVar resVar (Just exception)
-                      cleanUp
-                Nothing -> do
-                  flushTBQueue queue
-                  writeTVar aliveVar False
-                  putTMVar resVar Nothing
-                  return $ cleanUp
-       in loop
-    return
-      Actor
-        { tell = \message -> do
-            alive <- readTVar aliveVar
-            when alive
-              $ writeTBQueue queue
-              $ Just message,
-          kill = do
-            alive <- readTVar aliveVar
-            when alive
-              $ writeTBQueue queue Nothing,
-          wait = readTMVar resVar
-        }
+spawnStatelessIndividual interpreter cleaner =
+  -- TODO: Optimize by reimplementing directly.
+  spawnStatefulIndividual () (const interpreter) (const cleaner)
 
 spawnStatelessBatched ::
   -- | Interpreter of a batch of messages.
@@ -183,98 +151,50 @@ spawnStatefulIndividual ::
   IO (Actor message)
 spawnStatefulIndividual zero step finalizer =
   do
-    queue <- newTBQueueIO 1000
-    aliveVar <- newTVarIO True
-    resVar <- newEmptyTMVarIO @(Maybe SomeException)
+    runner <- atomically Runner.start
     forkIOWithUnmask $ \unmask ->
       let loop !state =
-            join $ atomically $ do
-              message <- readTBQueue queue
+            do
+              message <- atomically $ Runner.receiveSingle runner
               case message of
-                Just message -> return $ do
-                  result <- try @SomeException $ unmask $ step state message
-                  case result of
-                    Right newState ->
-                      loop newState
-                    Left exception -> do
-                      atomically $ do
-                        flushTBQueue queue
-                        writeTVar aliveVar False
-                        putTMVar resVar (Just exception)
-                      finalizer state
-                Nothing -> do
-                  flushTBQueue queue
-                  writeTVar aliveVar False
-                  putTMVar resVar Nothing
-                  return $ finalizer state
+                Just message ->
+                  do
+                    result <- try @SomeException $ unmask $ step state message
+                    case result of
+                      Right newState ->
+                        loop newState
+                      Left exception ->
+                        do
+                          atomically $ Runner.releaseWithException runner exception
+                          finalizer state
+                Nothing ->
+                  finalizer state
        in loop zero
-    return
-      Actor
-        { tell = \message -> do
-            alive <- readTVar aliveVar
-            when alive
-              $ writeTBQueue queue
-              $ Just message,
-          kill = do
-            alive <- readTVar aliveVar
-            when alive
-              $ writeTBQueue queue Nothing,
-          wait = readTMVar resVar
-        }
+    return $ fromRunner runner
 
 spawnStatefulBatched :: state -> (state -> NonEmpty message -> IO state) -> (state -> IO ()) -> IO (Actor message)
 spawnStatefulBatched zero step finalizer =
   do
-    queue <- newTBQueueIO 1000
-    aliveVar <- newTVarIO True
-    resVar <- newEmptyTMVarIO @(Maybe SomeException)
+    runner <- atomically Runner.start
     forkIOWithUnmask $ \unmask ->
       let loop !state =
-            join $ atomically $ do
-              flushing <- flushNonEmptyTBQueue queue
-              let (messages, flushingTail) = List.splitWhileJust (toList flushing)
+            do
+              messages <- atomically $ Runner.receiveMultiple runner
               case messages of
-                -- Implies that the tail is not empty.
-                -- And that it starts with a Nothing.
-                [] -> do
-                  writeTVar aliveVar False
-                  putTMVar resVar Nothing
-                  return $ do
-                    finalizer state
                 messagesHead : messagesTail ->
-                  return $ do
-                    result <-
-                      try @SomeException
-                        $ unmask
-                        $ step state (messagesHead :| messagesTail)
+                  do
+                    let nonEmptyMessages = messagesHead :| messagesTail
+                    result <- try @SomeException $ unmask $ step state nonEmptyMessages
                     case result of
                       Right newState ->
-                        case flushingTail of
-                          [] -> loop newState
-                          _ -> do
-                            atomically $ do
-                              writeTVar aliveVar False
-                              putTMVar resVar Nothing
-                            finalizer state
+                        loop newState
                       Left exception -> do
-                        atomically $ do
-                          writeTVar aliveVar False
-                          putTMVar resVar Nothing
+                        atomically $ Runner.releaseWithException runner exception
                         finalizer state
+                -- Empty batch means that the runner is finished.
+                [] -> finalizer state
        in loop zero
-    return
-      Actor
-        { tell = \message -> do
-            alive <- readTVar aliveVar
-            when alive
-              $ writeTBQueue queue
-              $ Just message,
-          kill = do
-            alive <- readTVar aliveVar
-            when alive
-              $ writeTBQueue queue Nothing,
-          wait = readTMVar resVar
-        }
+    return $ fromRunner runner
 
 -- * Control
 
