@@ -22,6 +22,7 @@ module TheatreDev.StmBased
 where
 
 import TheatreDev.Prelude
+import TheatreDev.StmBased.StmStructures.Runner (Runner)
 import qualified TheatreDev.StmBased.StmStructures.Runner as Runner
 import TheatreDev.StmBased.Tell (Tell)
 import qualified TheatreDev.StmBased.Tell as Tell
@@ -69,7 +70,7 @@ instance Decidable Actor where
 
 -- * Composition
 
-fromRunner :: Runner.Runner a -> Actor a
+fromRunner :: Runner a -> Actor a
 fromRunner runner =
   Actor
     { tell = Runner.tell runner,
@@ -177,8 +178,8 @@ spawnStatefulBatched zero step finalizer =
     forkIOWithUnmask $ \unmask ->
       let loop !state =
             do
-              messages <- fmap nonEmpty $ atomically $ Runner.receiveMultiple runner
-              case messages of
+              messages <- atomically $ Runner.receiveMultiple runner
+              case nonEmpty messages of
                 Just nonEmptyMessages ->
                   do
                     result <- try @SomeException $ unmask $ step state nonEmptyMessages
