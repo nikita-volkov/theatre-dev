@@ -81,6 +81,7 @@ library
     TheatreDev.ExtrasFor.TBQueue
     TheatreDev.Prelude
     TheatreDev.StmBased.StmStructures.Runner
+    TheatreDev.StmBased.Tell
     TheatreDev.StmBased.Wait
     TheatreDev.Terminal.StatefulActorSpec
 

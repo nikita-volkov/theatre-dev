@@ -23,6 +23,8 @@ where
 
 import TheatreDev.Prelude
 import qualified TheatreDev.StmBased.StmStructures.Runner as Runner
+import TheatreDev.StmBased.Tell (Tell)
+import qualified TheatreDev.StmBased.Tell as Tell
 import qualified TheatreDev.StmBased.Wait as Wait
 
 -- |
@@ -87,29 +89,21 @@ fromRunner runner =
 --
 -- You can consider this being an interface to the Sum monoid.
 oneOf :: [Actor message] -> Actor message
-oneOf actors =
-  Actor {tell, kill, wait}
-  where
-    tell msg =
-      asum (fmap (($ msg) . (.tell)) actors)
-    kill =
-      traverse_ (.kill) actors
-    wait =
-      Wait.all (fmap (.wait) actors)
+oneOf = composition Tell.one
 
 -- |
 --
 -- You can consider this being an interface to the Product monoid.
 allOf :: [Actor message] -> Actor message
-allOf actors =
-  Actor {tell, kill, wait}
-  where
-    tell msg =
-      forM_ actors $ \actor -> actor.tell msg
-    kill =
-      traverse_ (.kill) actors
-    wait =
-      Wait.all (fmap (.wait) actors)
+allOf = composition Tell.all
+
+composition :: ([Tell message] -> Tell message) -> [Actor message] -> Actor message
+composition tellReducer actors =
+  Actor
+    { tell = tellReducer (fmap (.tell) actors),
+      kill = traverse_ (.kill) actors,
+      wait = Wait.all (fmap (.wait) actors)
+    }
 
 -- * Acquisition
 
