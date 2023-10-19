@@ -71,7 +71,6 @@ receiveMultiple ::
 receiveMultiple Runner {..} =
   do
     (messages, remainingCommands) <- do
-      queueLength <- lengthTBQueue queue
       head <- readTBQueue queue
       tail <- simplerFlushTBQueue queue
       return $ List.splitWhileJust $ head : tail
