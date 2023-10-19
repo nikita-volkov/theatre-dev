@@ -10,8 +10,8 @@ spec :: Spec
 spec =
   do
     describe "spawnStatelessBatched" do
-      let spawnInt step = Actor.spawnStatefulBatched @Int 0 step (const (return ()))
-      let spawnUnit step = Actor.spawnStatefulBatched () step (const (return ()))
+      let spawnInt step = Actor.spawnStatefulBatched @Int 0 (const (return ())) step
+      let spawnUnit step = Actor.spawnStatefulBatched () (const (return ())) step
 
       it "Works in batches" do
         acc <- newIORef []

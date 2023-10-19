@@ -109,7 +109,6 @@ allOf = tellComposition Tell.all
 -- The implementation applies a modulo equal to the amount
 -- of actors to the hash and thus determines the index
 -- of the actor to dispatch the message to.
---
 -- This is inspired by how partitioning is done in Kafka.
 byKeyHash ::
   -- | Function extracting the key from the message and hashing it.
@@ -137,35 +136,35 @@ tellComposition tellReducer actors =
 -- Killing that actor will make it process all the messages in the queue first.
 -- All the messages sent to it after killing won't be processed.
 spawnStatelessIndividual ::
+  -- | Clean up when killed.
+  IO () ->
   -- | Interpreter of a message.
   (message -> IO ()) ->
-  -- | Clean up when killed.
-  IO () ->
   -- | Fork a thread to run the handler daemon on and
   -- produce a handle to control it.
   IO (Actor message)
-spawnStatelessIndividual interpreter cleaner =
+spawnStatelessIndividual cleaner interpreter =
   -- TODO: Optimize by reimplementing directly.
-  spawnStatefulIndividual () (const interpreter) (const cleaner)
+  spawnStatefulIndividual () (const cleaner) (const interpreter)
 
 spawnStatelessBatched ::
-  -- | Interpreter of a batch of messages.
-  (NonEmpty message -> IO ()) ->
   -- | Clean up when killed.
   IO () ->
+  -- | Interpreter of a batch of messages.
+  (NonEmpty message -> IO ()) ->
   -- | Fork a thread to run the handler daemon on and
   -- produce a handle to control it.
   IO (Actor message)
-spawnStatelessBatched interpreter cleaner =
+spawnStatelessBatched cleaner interpreter =
   -- TODO: Optimize by reimplementing directly.
-  spawnStatefulBatched () (const interpreter) (const cleaner)
+  spawnStatefulBatched () (const cleaner) (const interpreter)
 
 spawnStatefulIndividual ::
   state ->
-  (state -> message -> IO state) ->
   (state -> IO ()) ->
+  (state -> message -> IO state) ->
   IO (Actor message)
-spawnStatefulIndividual zero step finalizer =
+spawnStatefulIndividual zero finalizer step =
   do
     runner <- atomically Runner.start
     forkIOWithUnmask $ \unmask ->
@@ -190,10 +189,10 @@ spawnStatefulIndividual zero step finalizer =
 
 spawnStatefulBatched ::
   state ->
-  (state -> NonEmpty message -> IO state) ->
   (state -> IO ()) ->
+  (state -> NonEmpty message -> IO state) ->
   IO (Actor message)
-spawnStatefulBatched zero step finalizer =
+spawnStatefulBatched zero finalizer step =
   do
     runner <- atomically Runner.start
     forkIOWithUnmask $ \unmask ->
