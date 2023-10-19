@@ -110,5 +110,6 @@ test-suite hspec
   other-modules:  TheatreDev.StmBasedSpec
   build-depends:
     , hspec >=2.11.6 && <3
+    , QuickCheck >=2.14 && <3
     , rerebase <2
     , theatre-dev
