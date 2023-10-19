@@ -72,7 +72,7 @@ spec =
           Actor.spawnStatefulBatched
             []
             ( \state -> do
-                -- threadDelay 1000
+                threadDelay 1000
                 putMVar resultVar state
             )
             ( \state msgs -> return $ foldl' (flip (:)) state msgs
@@ -83,7 +83,7 @@ spec =
         Actor.wait actor
 
         result <- takeMVar resultVar
-        shouldBe result input
+        shouldBe result $ reverse input
 
     describe "allOf" . modifyMaxSuccess (max 10000) $ do
       prop "" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) -> idempotentIOProperty do
