@@ -18,6 +18,7 @@ module TheatreDev.StmBased
     -- * Composition
     oneOf,
     allOf,
+    byKeyHash,
   )
 where
 
@@ -90,16 +91,36 @@ fromRunner runner =
 --
 -- You can consider this being an interface to the Sum monoid.
 oneOf :: [Actor message] -> Actor message
-oneOf = composition Tell.one
+oneOf = tellComposition Tell.one
 
 -- |
 --
 -- You can consider this being an interface to the Product monoid.
 allOf :: [Actor message] -> Actor message
-allOf = composition Tell.all
+allOf = tellComposition Tell.all
 
-composition :: ([Tell message] -> Tell message) -> [Actor message] -> Actor message
-composition tellReducer actors =
+-- |
+-- Dispatch the message across actors based on a key hash.
+--
+-- This lets you ensure of a property that messages with
+-- the same key will arrive to the same actor,
+-- letting you maintain a local associated state in the actors.
+--
+-- The implementation applies a modulo equal to the amount
+-- of actors to the hash and thus determines the index
+-- of the actor to dispatch the message to.
+--
+-- This is inspired by how partitioning is done in Kafka.
+byKeyHash ::
+  -- | Function extracting the key from the message and hashing it.
+  (message -> Int) ->
+  -- | Pool of actors.
+  [Actor message] ->
+  Actor message
+byKeyHash = tellComposition . Tell.byKeyHash
+
+tellComposition :: ([Tell message] -> Tell message) -> [Actor message] -> Actor message
+tellComposition tellReducer actors =
   Actor
     { tell = tellReducer (fmap (.tell) actors),
       kill = traverse_ (.kill) actors,
