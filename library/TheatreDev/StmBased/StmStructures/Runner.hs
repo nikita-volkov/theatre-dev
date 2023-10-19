@@ -16,6 +16,7 @@ where
 import Control.Concurrent.STM.TBQueue
 import Control.Concurrent.STM.TMVar
 import qualified TheatreDev.ExtrasFor.List as List
+import TheatreDev.ExtrasFor.TBQueue
 import TheatreDev.Prelude
 
 data Runner a = Runner
@@ -36,16 +37,15 @@ tell :: Runner a -> a -> STM ()
 tell Runner {..} message =
   do
     alive <- readTVar aliveVar
-    when alive
-      $ writeTBQueue queue
-      $ Just message
+    when alive do
+      writeTBQueue queue $ Just message
 
 kill :: Runner a -> STM ()
 kill Runner {..} =
   do
     alive <- readTVar aliveVar
-    when alive
-      $ writeTBQueue queue Nothing
+    when alive do
+      writeTBQueue queue Nothing
 
 wait :: Runner a -> STM (Maybe SomeException)
 wait Runner {..} =
@@ -71,8 +71,9 @@ receiveMultiple ::
 receiveMultiple Runner {..} =
   do
     (messages, remainingCommands) <- do
+      queueLength <- lengthTBQueue queue
       head <- readTBQueue queue
-      tail <- flushTBQueue queue
+      tail <- simplerFlushTBQueue queue
       return $ List.splitWhileJust $ head : tail
     case messages of
       -- Implies that the tail is not empty,
@@ -84,13 +85,13 @@ receiveMultiple Runner {..} =
         putTMVar resVar Nothing
         return Nothing
       messagesHead : messagesTail -> do
-        unless (null remainingCommands)
-          $ unGetTBQueue queue Nothing
+        unless (null remainingCommands) do
+          unGetTBQueue queue Nothing
         return $ Just $ messagesHead :| messagesTail
 
 releaseWithException :: Runner a -> SomeException -> STM ()
 releaseWithException Runner {..} exception =
   do
-    flushTBQueue queue
+    simplerFlushTBQueue queue
     writeTVar aliveVar False
     putTMVar resVar (Just exception)
