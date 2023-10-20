@@ -77,13 +77,13 @@ instance Decidable Actor where
 
 -- * Composition
 
-fromIdentifiedRunner :: UUID -> Runner a -> Actor a
-fromIdentifiedRunner id runner =
+fromRunner :: Runner a -> Actor a
+fromRunner runner =
   Actor
     { tell = Runner.tell runner,
       kill = Runner.kill runner,
       wait = Runner.wait runner,
-      ids = [id]
+      ids = [Runner.getId runner]
     }
 
 -- | Distribute the message stream across actors.
@@ -208,8 +208,7 @@ spawnStatefulBatched zero finalizer step =
                     $ atomically
                     $ Runner.releaseNormally runner
        in loop zero
-    id <- UuidV4.nextRandom
-    return $ fromIdentifiedRunner id runner
+    return $ fromRunner runner
 
 -- * Control
 
