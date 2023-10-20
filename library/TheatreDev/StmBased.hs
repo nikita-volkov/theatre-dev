@@ -165,27 +165,7 @@ spawnStatefulIndividual ::
   (state -> message -> IO state) ->
   IO (Actor message)
 spawnStatefulIndividual zero finalizer step =
-  do
-    runner <- atomically Runner.start
-    forkIOWithUnmask $ \unmask ->
-      let loop !state =
-            do
-              message <- atomically $ Runner.receiveSingle runner
-              case message of
-                Just message ->
-                  do
-                    result <- try @SomeException $ unmask $ step state message
-                    case result of
-                      Right newState ->
-                        loop newState
-                      Left exception ->
-                        do
-                          atomically $ Runner.releaseWithException runner exception
-                          finalizer state
-                Nothing ->
-                  finalizer state
-       in loop zero
-    return $ fromRunner runner
+  spawnStatefulBatched zero finalizer $ foldM step
 
 spawnStatefulBatched ::
   state ->
