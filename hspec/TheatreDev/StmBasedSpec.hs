@@ -88,33 +88,11 @@ spec =
         shouldBe result $ reverse input
 
     describe "allOf" . modifyMaxSuccess (max Preferences.largePropertyMaxSuccess) $ do
+      it "Passes 87:[0]" do
+        results <- simulateAllOf 87 [0]
+        shouldBe (length results) (87 * Preferences.concurrency)
       prop "" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) -> idempotentIOProperty do
-        resultsVar <- newTVarIO []
-        actor <-
-          fmap Actor.allOf
-            $ replicateM size
-            $ Actor.spawnStatefulIndividual
-              []
-              ( \state ->
-                  atomically
-                    $ modifyTVar' resultsVar
-                    $ mappend state
-              )
-              ( \state msg ->
-                  return $ msg : state
-              )
-
-        mapConcurrently id
-          $ replicate Preferences.concurrency
-          $ forkIO
-          $ for_ messages
-          $ Actor.tell actor
-
-        Actor.kill actor
-        Actor.wait actor
-
-        results <- readTVarIO resultsVar
-
+        results <- simulateAllOf size messages
         return
           $ conjoin
             [ length results === length messages * size * Preferences.concurrency
@@ -194,3 +172,32 @@ oneOf =
         $ conjoin
           [ sort results === sort (concat (replicate Preferences.concurrency messages))
           ]
+
+simulateAllOf :: (Show a) => Int -> [a] -> IO [a]
+simulateAllOf size messages =
+  do
+    resultsVar <- newTVarIO []
+    actor <-
+      fmap Actor.allOf
+        $ replicateM size
+        $ Actor.spawnStatefulIndividual
+          []
+          ( \state ->
+              atomically
+                $ modifyTVar' resultsVar
+                $ mappend state
+          )
+          ( \state msg ->
+              return $ msg : state
+          )
+
+    mapConcurrently id
+      $ replicate Preferences.concurrency
+      $ forkIO
+      $ for_ messages
+      $ Actor.tell actor
+
+    Actor.kill actor
+    Actor.wait actor
+
+    readTVarIO resultsVar
