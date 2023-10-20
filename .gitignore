@@ -1,0 +1,20 @@
+# We follow the Gitignore Whitelisting approach here.
+# Please see https://jasonstitt.com/gitignore-whitelisting-patterns
+# to learn about it.
+
+# Ignore everything in the root
+/*
+
+# But allow dirs in the root
+!/.github
+!/hspec
+!/library
+
+# And allow files in the root
+!/.gitignore
+!/cabal.project
+!/LICENCE
+!/*.cabal
+
+# And ignore noise in every dir
+.DS_Store
