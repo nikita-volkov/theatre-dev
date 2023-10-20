@@ -89,7 +89,7 @@ spec =
       prop "" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) -> idempotentIOProperty do
         resultsVar <- newTVarIO []
         actor <-
-          fmap Actor.oneOf
+          fmap Actor.allOf
             $ replicateM size
             $ Actor.spawnStatefulIndividual
               []
