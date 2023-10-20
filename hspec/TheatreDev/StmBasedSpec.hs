@@ -102,7 +102,9 @@ spec =
                   return $ msg : state
               )
 
-        for_ messages $ Actor.tell actor
+        forkIO $ for_ messages $ Actor.tell actor
+        forkIO $ for_ messages $ Actor.tell actor
+        forkIO $ for_ messages $ Actor.tell actor
 
         Actor.kill actor
         Actor.wait actor
@@ -111,7 +113,7 @@ spec =
 
         return
           $ conjoin
-            [ length results === (length messages) * size
+            [ length results === (length messages) * size * 3
             ]
 
     describe "byKeyHash" . modifyMaxSuccess (max 10000) $ do
@@ -131,7 +133,9 @@ spec =
                   return $ IntMap.alter (Just . maybe 1 succ) msg state
               )
 
-        for_ messages $ Actor.tell actor
+        forkIO $ for_ messages $ Actor.tell actor
+        forkIO $ for_ messages $ Actor.tell actor
+        forkIO $ for_ messages $ Actor.tell actor
 
         Actor.kill actor
         Actor.wait actor
@@ -153,7 +157,7 @@ spec =
 oneOf :: Spec
 oneOf =
   describe "oneOf" . modifyMaxSuccess (max 10000) $ do
-    prop "" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) -> idempotentIOProperty do
+    prop "Dispatches correctly" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) -> idempotentIOProperty do
       resultsVar <- newTVarIO []
       actor <-
         fmap Actor.oneOf
@@ -169,7 +173,9 @@ oneOf =
                 return $ msg : state
             )
 
-      for_ messages $ Actor.tell actor
+      forkIO $ for_ messages $ Actor.tell actor
+      forkIO $ for_ messages $ Actor.tell actor
+      forkIO $ for_ messages $ Actor.tell actor
 
       Actor.kill actor
       Actor.wait actor
@@ -178,5 +184,5 @@ oneOf =
 
       return
         $ conjoin
-          [ sort results === sort messages
+          [ sort results === sort (concat (replicate 3 messages))
           ]
