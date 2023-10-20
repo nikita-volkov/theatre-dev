@@ -57,36 +57,43 @@ receiveSingle ::
   STM (Maybe a)
 receiveSingle Runner {..} =
   do
-    message <- readTBQueue queue
-    case message of
-      Just message -> return (Just message)
-      Nothing -> do
-        writeTVar aliveVar False
-        putTMVar resVar Nothing
-        return Nothing
+    alive <- readTVar aliveVar
+    if alive
+      then do
+        message <- readTBQueue queue
+        case message of
+          Just message -> return (Just message)
+          Nothing -> do
+            writeTVar aliveVar False
+            putTMVar resVar Nothing
+            return Nothing
+      else return Nothing
 
 receiveMultiple ::
   Runner a ->
   STM (Maybe (NonEmpty a))
 receiveMultiple Runner {..} =
   do
-    (messages, remainingCommands) <- do
-      head <- readTBQueue queue
-      tail <- simplerFlushTBQueue queue
-      return $ List.splitWhileJust $ head : tail
-    case messages of
-      -- Implies that the tail is not empty,
-      -- because we have at least one element.
-      -- And that it starts with a Nothing.
-      [] -> do
-        forM_ remainingCommands $ unGetTBQueue queue
-        writeTVar aliveVar False
-        putTMVar resVar Nothing
-        return Nothing
-      messagesHead : messagesTail -> do
-        unless (null remainingCommands) do
-          unGetTBQueue queue Nothing
-        return $ Just $ messagesHead :| messagesTail
+    alive <- readTVar aliveVar
+    if alive
+      then do
+        (messages, remainingCommands) <- do
+          head <- readTBQueue queue
+          tail <- simplerFlushTBQueue queue
+          return $ List.splitWhileJust $ head : tail
+        case messages of
+          -- Implies that the tail is not empty,
+          -- because we have at least one element.
+          -- And that it starts with a Nothing.
+          [] -> do
+            writeTVar aliveVar False
+            putTMVar resVar Nothing
+            return Nothing
+          messagesHead : messagesTail -> do
+            unless (null remainingCommands) do
+              unGetTBQueue queue Nothing
+            return $ Just $ messagesHead :| messagesTail
+      else return Nothing
 
 releaseWithException :: Runner a -> SomeException -> STM ()
 releaseWithException Runner {..} exception =
