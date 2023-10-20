@@ -79,6 +79,7 @@ receiveSingle Runner {..} =
       else return Nothing
 
 receiveMultiple ::
+  (Show a) =>
   Runner a ->
   STM (Maybe (NonEmpty a))
 receiveMultiple Runner {..} =
@@ -90,6 +91,7 @@ receiveMultiple Runner {..} =
           head <- readTBQueue queue
           tail <- simplerFlushTBQueue queue
           return $ List.splitWhileJust $ head : tail
+        traceM $ show id <> "/receiveMultiple: " <> show (messages, remainingCommands)
         case messages of
           -- Implies that the tail is not empty,
           -- because we have at least one element.
