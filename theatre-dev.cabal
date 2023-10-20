@@ -109,6 +109,7 @@ test-suite hspec
   main-is:        Main.hs
   other-modules:  TheatreDev.StmBasedSpec
   build-depends:
+    , async
     , hspec >=2.11.6 && <3
     , QuickCheck >=2.14 && <3
     , rerebase <2

@@ -2,6 +2,7 @@
 
 module TheatreDev.StmBasedSpec (spec) where
 
+import Control.Concurrent.Async
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.IntSet as IntSet
 import Test.Hspec
@@ -102,9 +103,11 @@ spec =
                   return $ msg : state
               )
 
-        forkIO $ for_ messages $ Actor.tell actor
-        forkIO $ for_ messages $ Actor.tell actor
-        forkIO $ for_ messages $ Actor.tell actor
+        mapConcurrently id
+          $ [ for_ messages $ Actor.tell actor,
+              for_ messages $ Actor.tell actor,
+              for_ messages $ Actor.tell actor
+            ]
 
         Actor.kill actor
         Actor.wait actor
@@ -133,9 +136,11 @@ spec =
                   return $ IntMap.alter (Just . maybe 1 succ) msg state
               )
 
-        forkIO $ for_ messages $ Actor.tell actor
-        forkIO $ for_ messages $ Actor.tell actor
-        forkIO $ for_ messages $ Actor.tell actor
+        mapConcurrently id
+          $ [ for_ messages $ Actor.tell actor,
+              for_ messages $ Actor.tell actor,
+              for_ messages $ Actor.tell actor
+            ]
 
         Actor.kill actor
         Actor.wait actor
