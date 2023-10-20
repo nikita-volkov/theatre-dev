@@ -55,7 +55,11 @@ kill Runner {..} =
   writeTVar aliveVar False
 
 wait :: Runner a -> STM (Maybe SomeException)
-wait Runner {..} =
+wait Runner {..} = do
+  isAlive <- readTVar aliveVar
+  when isAlive retry
+  queueIsEmpty <- isEmptyTBQueue queue
+  unless queueIsEmpty retry
   readTMVar resVar
 
 receiveSingle ::
