@@ -88,9 +88,11 @@ spec =
         shouldBe result $ reverse input
 
     describe "allOf" . modifyMaxSuccess (max Preferences.largePropertyMaxSuccess) $ do
-      it "Passes 87:[0]" do
-        results <- simulateAllOf 87 [0]
-        shouldBe (length results) (87 * Preferences.concurrency)
+      it "Passes 1" do
+        let emittersNum = 10
+            messagesNum = 10
+        results <- simulateAllOf emittersNum [0 .. messagesNum - 1]
+        shouldBe (length results) (emittersNum * messagesNum * Preferences.concurrency)
       prop "" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) -> idempotentIOProperty do
         results <- simulateAllOf size messages
         return
