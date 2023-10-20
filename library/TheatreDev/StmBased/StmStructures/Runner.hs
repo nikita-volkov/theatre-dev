@@ -75,13 +75,15 @@ receiveMultiple ::
   STM (Maybe (NonEmpty a))
 receiveMultiple Runner {..} =
   do
-    alive <- readTVar aliveVar
-    if alive
-      then do
-        messagesHead <- readTBQueue queue
-        messagesTail <- simplerFlushTBQueue queue
+    messages <- simplerFlushTBQueue queue
+    case messages of
+      [] -> do
+        alive <- readTVar aliveVar
+        if alive
+          then retry
+          else return Nothing
+      messagesHead : messagesTail ->
         return $ Just $ messagesHead :| messagesTail
-      else return Nothing
 
 releaseWithException :: Runner a -> SomeException -> STM ()
 releaseWithException Runner {..} exception =
