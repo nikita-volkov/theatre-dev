@@ -194,7 +194,7 @@ spawnStatefulBatched zero finalizer step =
               case messages of
                 Just nonEmptyMessages ->
                   do
-                    result <- try @SomeException $ unmask $ step state nonEmptyMessages
+                    result <- try $ unmask $ step state nonEmptyMessages
                     case result of
                       Right newState ->
                         loop newState
