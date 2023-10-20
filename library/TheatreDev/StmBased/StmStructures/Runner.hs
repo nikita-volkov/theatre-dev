@@ -10,6 +10,7 @@ module TheatreDev.StmBased.StmStructures.Runner
     receiveSingle,
     receiveMultiple,
     releaseWithException,
+    releaseNormally,
 
     -- * Inspection
     getId,
@@ -24,7 +25,7 @@ import TheatreDev.ExtrasFor.TBQueue
 import TheatreDev.Prelude
 
 data Runner a = Runner
-  { queue :: TBQueue (Maybe a),
+  { queue :: TBQueue a,
     aliveVar :: TVar Bool,
     resVar :: TMVar (Maybe SomeException),
     id :: UUID
@@ -47,14 +48,11 @@ tell Runner {..} message =
   do
     alive <- readTVar aliveVar
     when alive do
-      writeTBQueue queue $ Just message
+      writeTBQueue queue message
 
 kill :: Runner a -> STM ()
 kill Runner {..} =
-  do
-    alive <- readTVar aliveVar
-    when alive do
-      writeTBQueue queue Nothing
+  writeTVar aliveVar False
 
 wait :: Runner a -> STM (Maybe SomeException)
 wait Runner {..} =
@@ -68,14 +66,7 @@ receiveSingle Runner {..} =
   do
     alive <- readTVar aliveVar
     if alive
-      then do
-        message <- readTBQueue queue
-        case message of
-          Just message -> return (Just message)
-          Nothing -> do
-            writeTVar aliveVar False
-            putTMVar resVar Nothing
-            return Nothing
+      then Just <$> readTBQueue queue
       else return Nothing
 
 receiveMultiple ::
@@ -87,28 +78,17 @@ receiveMultiple Runner {..} =
     alive <- readTVar aliveVar
     if alive
       then do
-        (messages, remainingCommands) <- do
-          head <- readTBQueue queue
-          tail <- simplerFlushTBQueue queue
-          return $ List.splitWhileJust $ head : tail
-        traceM $ show id <> "/receiveMultiple: " <> show (messages, remainingCommands)
-        case messages of
-          -- Implies that the tail is not empty,
-          -- because we have at least one element.
-          -- And that it starts with a Nothing.
-          [] -> do
-            writeTVar aliveVar False
-            putTMVar resVar Nothing
-            return Nothing
-          messagesHead : messagesTail -> do
-            unless (null remainingCommands) do
-              unGetTBQueue queue Nothing
-            return $ Just $ messagesHead :| messagesTail
+        messagesHead <- readTBQueue queue
+        messagesTail <- simplerFlushTBQueue queue
+        return $ Just $ messagesHead :| messagesTail
       else return Nothing
 
 releaseWithException :: Runner a -> SomeException -> STM ()
 releaseWithException Runner {..} exception =
   do
     simplerFlushTBQueue queue
-    writeTVar aliveVar False
     putTMVar resVar (Just exception)
+
+releaseNormally :: Runner a -> STM ()
+releaseNormally Runner {..} =
+  writeTMVar resVar Nothing

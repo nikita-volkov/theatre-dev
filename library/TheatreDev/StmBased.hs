@@ -199,11 +199,14 @@ spawnStatefulBatched zero finalizer step =
                       Right newState ->
                         loop newState
                       Left exception ->
-                        do
-                          atomically $ Runner.releaseWithException runner exception
-                          finalizer state
+                        finally (finalizer state)
+                          $ atomically
+                          $ Runner.releaseWithException runner exception
                 -- Empty batch means that the runner is finished.
-                Nothing -> finalizer state
+                Nothing ->
+                  finally (finalizer state)
+                    $ atomically
+                    $ Runner.releaseNormally runner
        in loop zero
     id <- UuidV4.nextRandom
     return $ fromIdentifiedRunner id runner
