@@ -9,6 +9,7 @@ import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck
 import TheatreDev.StmBased qualified as Actor
+import TheatreDev.StmBasedSpec.Preferences qualified as Preferences
 import Prelude
 
 spec :: Spec
@@ -86,7 +87,7 @@ spec =
         result <- takeMVar resultVar
         shouldBe result $ reverse input
 
-    describe "allOf" . modifyMaxSuccess (max 10000) $ do
+    describe "allOf" . modifyMaxSuccess (max Preferences.largePropertyMaxSuccess) $ do
       prop "" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) -> idempotentIOProperty do
         resultsVar <- newTVarIO []
         actor <-
@@ -104,10 +105,10 @@ spec =
               )
 
         mapConcurrently id
-          $ [ for_ messages $ Actor.tell actor,
-              for_ messages $ Actor.tell actor,
-              for_ messages $ Actor.tell actor
-            ]
+          $ replicate Preferences.concurrency
+          $ forkIO
+          $ for_ messages
+          $ Actor.tell actor
 
         Actor.kill actor
         Actor.wait actor
@@ -119,7 +120,7 @@ spec =
             [ length results === (length messages) * size * 3
             ]
 
-    describe "byKeyHash" . modifyMaxSuccess (max 10000) $ do
+    describe "byKeyHash" . modifyMaxSuccess (max Preferences.largePropertyMaxSuccess) $ do
       prop "Dispatches individually" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) -> idempotentIOProperty $ do
         resultsVar <- newTVarIO []
         actor <-
@@ -137,10 +138,10 @@ spec =
               )
 
         mapConcurrently id
-          $ [ for_ messages $ Actor.tell actor,
-              for_ messages $ Actor.tell actor,
-              for_ messages $ Actor.tell actor
-            ]
+          $ replicate Preferences.concurrency
+          $ forkIO
+          $ for_ messages
+          $ Actor.tell actor
 
         Actor.kill actor
         Actor.wait actor
@@ -161,7 +162,7 @@ spec =
 -- TODO: Restore it and fix the issue. It's disabled because it's hanging.
 oneOf :: Spec
 oneOf =
-  describe "oneOf" . modifyMaxSuccess (max 10000) $ do
+  describe "oneOf" . modifyMaxSuccess (max Preferences.largePropertyMaxSuccess) $ do
     prop "Dispatches correctly" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) -> idempotentIOProperty do
       resultsVar <- newTVarIO []
       actor <-
@@ -178,9 +179,11 @@ oneOf =
                 return $ msg : state
             )
 
-      forkIO $ for_ messages $ Actor.tell actor
-      forkIO $ for_ messages $ Actor.tell actor
-      forkIO $ for_ messages $ Actor.tell actor
+      mapConcurrently id
+        $ replicate Preferences.concurrency
+        $ forkIO
+        $ for_ messages
+        $ Actor.tell actor
 
       Actor.kill actor
       Actor.wait actor

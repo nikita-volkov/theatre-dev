@@ -108,7 +108,10 @@ test-suite hspec
   type:           exitcode-stdio-1.0
   hs-source-dirs: hspec
   main-is:        Main.hs
-  other-modules:  TheatreDev.StmBasedSpec
+  other-modules:
+    TheatreDev.StmBasedSpec
+    TheatreDev.StmBasedSpec.Preferences
+
   build-depends:
     , async
     , hspec >=2.11.6 && <3
