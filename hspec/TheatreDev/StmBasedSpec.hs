@@ -117,7 +117,7 @@ spec =
 
         return
           $ conjoin
-            [ length results === (length messages) * size * 3
+            [ length results === length messages * size * Preferences.concurrency
             ]
 
     describe "byKeyHash" . modifyMaxSuccess (max Preferences.largePropertyMaxSuccess) $ do
@@ -192,5 +192,5 @@ oneOf =
 
       return
         $ conjoin
-          [ sort results === sort (concat (replicate 3 messages))
+          [ sort results === sort (concat (replicate Preferences.concurrency messages))
           ]
