@@ -24,10 +24,10 @@ where
 
 import TheatreDev.Prelude
 import TheatreDev.StmBased.StmStructures.Runner (Runner)
-import qualified TheatreDev.StmBased.StmStructures.Runner as Runner
+import TheatreDev.StmBased.StmStructures.Runner qualified as Runner
 import TheatreDev.StmBased.Tell (Tell)
-import qualified TheatreDev.StmBased.Tell as Tell
-import qualified TheatreDev.StmBased.Wait as Wait
+import TheatreDev.StmBased.Tell qualified as Tell
+import TheatreDev.StmBased.Wait qualified as Wait
 
 -- |
 -- Controls of an actor, which processes the messages of type @message@.

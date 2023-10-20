@@ -3,12 +3,12 @@
 module TheatreDev.StmBasedSpec (spec) where
 
 import Control.Concurrent.Async
-import qualified Data.IntMap.Strict as IntMap
-import qualified Data.IntSet as IntSet
+import Data.IntMap.Strict qualified as IntMap
+import Data.IntSet qualified as IntSet
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck
-import qualified TheatreDev.StmBased as Actor
+import TheatreDev.StmBased qualified as Actor
 import Prelude
 
 spec :: Spec

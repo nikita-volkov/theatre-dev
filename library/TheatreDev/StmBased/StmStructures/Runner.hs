@@ -15,7 +15,7 @@ where
 
 import Control.Concurrent.STM.TBQueue
 import Control.Concurrent.STM.TMVar
-import qualified TheatreDev.ExtrasFor.List as List
+import TheatreDev.ExtrasFor.List qualified as List
 import TheatreDev.ExtrasFor.TBQueue
 import TheatreDev.Prelude
 

@@ -46,6 +46,7 @@ common base
     FunctionalDependencies
     GADTs
     GeneralizedNewtypeDeriving
+    ImportQualifiedPost
     LambdaCase
     LiberalTypeSynonyms
     MagicHash
