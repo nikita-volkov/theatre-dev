@@ -182,7 +182,7 @@ spawnStatefulBatched ::
   IO (Actor message)
 spawnStatefulBatched zero finalizer step =
   do
-    runner <- atomically Runner.start
+    runner <- Runner.start
     forkIOWithUnmask $ \unmask ->
       let loop !state =
             do

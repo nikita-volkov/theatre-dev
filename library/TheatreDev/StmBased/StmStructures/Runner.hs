@@ -10,11 +10,15 @@ module TheatreDev.StmBased.StmStructures.Runner
     receiveSingle,
     receiveMultiple,
     releaseWithException,
+
+    -- * Inspection
+    getId,
   )
 where
 
 import Control.Concurrent.STM.TBQueue
 import Control.Concurrent.STM.TMVar
+import Data.UUID.V4 qualified as UuidV4
 import TheatreDev.ExtrasFor.List qualified as List
 import TheatreDev.ExtrasFor.TBQueue
 import TheatreDev.Prelude
@@ -22,15 +26,20 @@ import TheatreDev.Prelude
 data Runner a = Runner
   { queue :: TBQueue (Maybe a),
     aliveVar :: TVar Bool,
-    resVar :: TMVar (Maybe SomeException)
+    resVar :: TMVar (Maybe SomeException),
+    id :: UUID
   }
 
-start :: STM (Runner a)
+getId :: Runner a -> UUID
+getId = (.id)
+
+start :: IO (Runner a)
 start =
   do
-    queue <- newTBQueue 1000
-    aliveVar <- newTVar True
-    resVar <- newEmptyTMVar @(Maybe SomeException)
+    queue <- newTBQueueIO 1000
+    aliveVar <- newTVarIO True
+    resVar <- newEmptyTMVarIO
+    id <- UuidV4.nextRandom
     return Runner {..}
 
 tell :: Runner a -> a -> STM ()
