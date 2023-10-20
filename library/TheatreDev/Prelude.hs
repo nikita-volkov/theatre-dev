@@ -44,6 +44,7 @@ import Data.Semigroup as Exports
 import Data.String as Exports
 import Data.Traversable as Exports
 import Data.Tuple as Exports
+import Data.UUID as Exports (UUID)
 import Data.Unique as Exports
 import Data.Version as Exports
 import Data.Void as Exports

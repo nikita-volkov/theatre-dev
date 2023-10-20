@@ -22,6 +22,7 @@ module TheatreDev.StmBased
   )
 where
 
+import Data.UUID.V4 qualified as UuidV4
 import TheatreDev.Prelude
 import TheatreDev.StmBased.StmStructures.Runner (Runner)
 import TheatreDev.StmBased.StmStructures.Runner qualified as Runner
@@ -42,41 +43,47 @@ data Actor message = Actor
     -- | Kill the actor.
     kill :: STM (),
     -- | Wait for the actor to die due to error or being killed.
-    wait :: STM (Maybe SomeException)
+    wait :: STM (Maybe SomeException),
+    -- | IDs of the constituent actors.
+    -- Useful for debugging.
+    ids :: [UUID]
   }
 
 instance Contravariant Actor where
-  contramap fn (Actor tell kill wait) =
-    Actor (tell . fn) kill wait
+  contramap fn (Actor tell kill wait ids) =
+    Actor (tell . fn) kill wait ids
 
 instance Divisible Actor where
   conquer =
-    Actor (const (return ())) (return ()) (return Nothing)
-  divide divisor (Actor lTell lKill lWait) (Actor rTell rKill rWait) =
-    Actor tell kill wait
-    where
-      tell msg = case divisor msg of (lMsg, rMsg) -> lTell lMsg >> rTell rMsg
-      kill = lKill >> rKill
-      wait = Wait.both lWait rWait
+    Actor (const (return ())) (return ()) (return Nothing) []
+  divide divisor (Actor lTell lKill lWait lIds) (Actor rTell rKill rWait rIds) =
+    Actor
+      { tell = \msg -> case divisor msg of (lMsg, rMsg) -> lTell lMsg >> rTell rMsg,
+        kill = lKill >> rKill,
+        wait = Wait.both lWait rWait,
+        ids = lIds <> rIds
+      }
 
 instance Decidable Actor where
   lose fn =
-    Actor (const (return ()) . absurd . fn) (return ()) (return Nothing)
-  choose choice (Actor lTell lKill lWait) (Actor rTell rKill rWait) =
-    Actor tell kill wait
-    where
-      tell = either lTell rTell . choice
-      kill = lKill >> rKill
-      wait = Wait.both lWait rWait
+    Actor (const (return ()) . absurd . fn) (return ()) (return Nothing) []
+  choose choice (Actor lTell lKill lWait lIds) (Actor rTell rKill rWait rIds) =
+    Actor
+      { tell = either lTell rTell . choice,
+        kill = lKill >> rKill,
+        wait = Wait.both lWait rWait,
+        ids = lIds <> rIds
+      }
 
 -- * Composition
 
-fromRunner :: Runner a -> Actor a
-fromRunner runner =
+fromIdentifiedRunner :: UUID -> Runner a -> Actor a
+fromIdentifiedRunner id runner =
   Actor
     { tell = Runner.tell runner,
       kill = Runner.kill runner,
-      wait = Runner.wait runner
+      wait = Runner.wait runner,
+      ids = [id]
     }
 
 -- | Distribute the message stream across actors.
@@ -123,7 +130,8 @@ tellComposition tellReducer actors =
   Actor
     { tell = tellReducer (fmap (.tell) actors),
       kill = traverse_ (.kill) actors,
-      wait = Wait.all (fmap (.wait) actors)
+      wait = Wait.all (fmap (.wait) actors),
+      ids = foldMap (.ids) actors
     }
 
 -- * Acquisition
@@ -193,7 +201,8 @@ spawnStatefulBatched zero finalizer step =
                 -- Empty batch means that the runner is finished.
                 Nothing -> finalizer state
        in loop zero
-    return $ fromRunner runner
+    id <- UuidV4.nextRandom
+    return $ fromIdentifiedRunner id runner
 
 -- * Control
 
