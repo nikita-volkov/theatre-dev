@@ -111,6 +111,7 @@ test-suite hspec
   main-is:        Main.hs
   other-modules:
     TheatreDev.StmBasedSpec
+    TheatreDev.StmBasedSpec.IO
     TheatreDev.StmBasedSpec.Preferences
 
   build-depends:

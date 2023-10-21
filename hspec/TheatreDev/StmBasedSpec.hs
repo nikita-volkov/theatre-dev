@@ -8,7 +8,9 @@ import Data.IntSet qualified as IntSet
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck
+import TheatreDev.StmBased (Actor)
 import TheatreDev.StmBased qualified as Actor
+import TheatreDev.StmBasedSpec.IO qualified as IO
 import TheatreDev.StmBasedSpec.Preferences qualified as Preferences
 import Prelude
 
@@ -87,22 +89,25 @@ spec =
         result <- takeMVar resultVar
         shouldBe result $ reverse input
 
-    describe "allOf" . modifyMaxSuccess (max Preferences.largePropertyMaxSuccess) $ do
+    describe "allOf" $ do
       it "Passes 1" do
         let emittersNum = 2
             messagesNum = 10
             actorsNum = 3
             messages = [0 .. messagesNum - 1]
-        results <- fmap (fmap sort) (simulateAllOf actorsNum emittersNum messages)
+        results <- fmap (fmap sort) (IO.simulateReduction Actor.allOf actorsNum emittersNum messages)
         shouldBe results (replicate actorsNum (sort (concat (replicate emittersNum messages))))
         shouldBe (getSum (foldMap (Sum . length) results)) (actorsNum * emittersNum * messagesNum)
-      prop "" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) -> idempotentIOProperty do
-        results <- concat <$> simulateAllOf Preferences.concurrency size messages
-        return
-          $ conjoin
-            [ length results === length messages * size * Preferences.concurrency,
-              sort results === sort (concat (replicate (size * Preferences.concurrency) messages))
-            ]
+      prop "" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) ->
+        idempotentIOProperty do
+          results <- concat <$> IO.simulateReduction Actor.allOf Preferences.concurrency size messages
+          return
+            $ conjoin
+              [ length results === length messages * size * Preferences.concurrency,
+                sort results === sort (concat (replicate (size * Preferences.concurrency) messages))
+              ]
+
+    oneOf
 
     describe "byKeyHash" . modifyMaxSuccess (max Preferences.largePropertyMaxSuccess) $ do
       prop "Dispatches individually" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) -> idempotentIOProperty $ do
@@ -147,59 +152,8 @@ oneOf :: Spec
 oneOf =
   describe "oneOf" . modifyMaxSuccess (max Preferences.largePropertyMaxSuccess) $ do
     prop "Dispatches correctly" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) -> idempotentIOProperty do
-      resultsVar <- newTVarIO []
-      actor <-
-        fmap Actor.oneOf
-          $ replicateM size
-          $ Actor.spawnStatefulIndividual
-            []
-            ( \state ->
-                atomically
-                  $ modifyTVar' resultsVar
-                  $ (state <>)
-            )
-            ( \state msg ->
-                return $ msg : state
-            )
-
-      mapConcurrently id
-        $ replicate Preferences.concurrency
-        $ for_ messages
-        $ Actor.tell actor
-
-      Actor.kill actor
-      Actor.wait actor
-
-      results <- readTVarIO resultsVar
-
+      results <- IO.simulateReduction Actor.oneOf 5 10 messages
       return
         $ conjoin
-          [ sort results === sort (concat (replicate Preferences.concurrency messages))
+          [ sort (concat results) === sort (concat (replicate Preferences.concurrency messages))
           ]
-
-simulateAllOf :: (Show a) => Int -> Int -> [a] -> IO [[a]]
-simulateAllOf actorsNum generatorsNum messages =
-  do
-    resultsVar <- newTVarIO []
-    actor <-
-      fmap Actor.allOf
-        $ replicateM actorsNum
-        $ Actor.spawnStatefulIndividual
-          []
-          ( \state ->
-              atomically
-                $ modifyTVar' resultsVar (reverse state :)
-          )
-          ( \state msg ->
-              return $ msg : state
-          )
-
-    mapConcurrently id
-      $ replicate generatorsNum
-      $ for_ messages
-      $ Actor.tell actor
-
-    Actor.kill actor
-    Actor.wait actor
-
-    readTVarIO resultsVar
