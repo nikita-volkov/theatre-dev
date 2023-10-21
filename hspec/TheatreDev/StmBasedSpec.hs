@@ -97,7 +97,8 @@ spec =
         results <- simulateAllOf size messages
         return
           $ conjoin
-            [ length results === length messages * size * Preferences.concurrency
+            [ length results === length messages * size * Preferences.concurrency,
+              sort results === sort (concat (replicate (size * Preferences.concurrency) messages))
             ]
 
     describe "byKeyHash" . modifyMaxSuccess (max Preferences.largePropertyMaxSuccess) $ do
