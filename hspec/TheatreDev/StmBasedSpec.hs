@@ -89,7 +89,7 @@ spec =
         result <- takeMVar resultVar
         shouldBe result $ reverse input
 
-    describe "allOf" $ do
+    describe "allOf" . modifyMaxSuccess (max 1000) $ do
       it "Passes 1" do
         let emittersNum = 2
             messagesNum = 10
@@ -107,7 +107,7 @@ spec =
                 results === sort (concat (replicate (size * Preferences.concurrency) messages))
               ]
 
-    describe "oneOf" . modifyMaxSuccess (max Preferences.largePropertyMaxSuccess) $ do
+    describe "oneOf" . modifyMaxSuccess (max 1000) $ do
       prop "Dispatches correctly" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) ->
         idempotentIOProperty do
           results <- sort . concat <$> IO.simulateReduction Actor.oneOf Preferences.concurrency size messages
