@@ -100,20 +100,22 @@ spec =
         shouldBe (getSum (foldMap (Sum . length) results)) (actorsNum * emittersNum * messagesNum)
       prop "" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) ->
         idempotentIOProperty do
-          results <- concat <$> IO.simulateReduction Actor.allOf Preferences.concurrency size messages
+          results <- sort . concat <$> IO.simulateReduction Actor.allOf Preferences.concurrency size messages
           return
             $ conjoin
               [ length results === length messages * size * Preferences.concurrency,
-                sort results === sort (concat (replicate (size * Preferences.concurrency) messages))
+                results === sort (concat (replicate (size * Preferences.concurrency) messages))
               ]
 
     describe "oneOf" . modifyMaxSuccess (max Preferences.largePropertyMaxSuccess) $ do
       prop "Dispatches correctly" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) ->
         idempotentIOProperty do
-          results <- IO.simulateReduction Actor.oneOf 5 10 messages
+          results <- sort . concat <$> IO.simulateReduction Actor.oneOf Preferences.concurrency size messages
           return
             $ conjoin
-              [ sort (concat results) === sort (concat (replicate Preferences.concurrency messages))
+              [ length results === length messages * size,
+                results
+                  === sort (concat (replicate (size) messages))
               ]
 
     describe "byKeyHash" . modifyMaxSuccess (max Preferences.largePropertyMaxSuccess) $ do
