@@ -89,14 +89,15 @@ spec =
 
     describe "allOf" . modifyMaxSuccess (max Preferences.largePropertyMaxSuccess) $ do
       it "Passes 1" do
-        let emittersNum = 10
+        let emittersNum = 2
             messagesNum = 10
+            actorsNum = 3
             messages = [0 .. messagesNum - 1]
-        results <- simulateAllOf emittersNum messages
-        shouldBe results (replicate emittersNum messages)
-        shouldBe (length results) (emittersNum * messagesNum)
+        results <- fmap (fmap sort) (simulateAllOf actorsNum emittersNum messages)
+        shouldBe results (replicate actorsNum (sort (concat (replicate emittersNum messages))))
+        shouldBe (getSum (foldMap (Sum . length) results)) (actorsNum * emittersNum * messagesNum)
       prop "" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) -> idempotentIOProperty do
-        results <- concat <$> simulateAllOf size messages
+        results <- concat <$> simulateAllOf Preferences.concurrency size messages
         return
           $ conjoin
             [ length results === length messages * size * Preferences.concurrency,
@@ -122,7 +123,6 @@ spec =
 
         mapConcurrently id
           $ replicate Preferences.concurrency
-          $ forkIO
           $ for_ messages
           $ Actor.tell actor
 
@@ -164,7 +164,6 @@ oneOf =
 
       mapConcurrently id
         $ replicate Preferences.concurrency
-        $ forkIO
         $ for_ messages
         $ Actor.tell actor
 
@@ -178,27 +177,25 @@ oneOf =
           [ sort results === sort (concat (replicate Preferences.concurrency messages))
           ]
 
-simulateAllOf :: (Show a) => Int -> [a] -> IO [[a]]
-simulateAllOf size messages =
+simulateAllOf :: (Show a) => Int -> Int -> [a] -> IO [[a]]
+simulateAllOf actorsNum generatorsNum messages =
   do
     resultsVar <- newTVarIO []
     actor <-
       fmap Actor.allOf
-        $ replicateM size
+        $ replicateM actorsNum
         $ Actor.spawnStatefulIndividual
           []
           ( \state ->
               atomically
-                $ modifyTVar' resultsVar
-                $ (:) state
+                $ modifyTVar' resultsVar (reverse state :)
           )
           ( \state msg ->
               return $ msg : state
           )
 
     mapConcurrently id
-      $ replicate Preferences.concurrency
-      $ forkIO
+      $ replicate generatorsNum
       $ for_ messages
       $ Actor.tell actor
 
