@@ -107,7 +107,14 @@ spec =
                 sort results === sort (concat (replicate (size * Preferences.concurrency) messages))
               ]
 
-    oneOf
+    describe "oneOf" . modifyMaxSuccess (max Preferences.largePropertyMaxSuccess) $ do
+      prop "Dispatches correctly" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) ->
+        idempotentIOProperty do
+          results <- IO.simulateReduction Actor.oneOf 5 10 messages
+          return
+            $ conjoin
+              [ sort (concat results) === sort (concat (replicate Preferences.concurrency messages))
+              ]
 
     describe "byKeyHash" . modifyMaxSuccess (max Preferences.largePropertyMaxSuccess) $ do
       prop "Dispatches individually" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) -> idempotentIOProperty $ do
@@ -146,14 +153,3 @@ spec =
                 then nubbedKeys === []
                 else IntSet.fromList nubbedKeys === IntSet.fromList messages
             ]
-
--- TODO: Restore it and fix the issue. It's disabled because it's hanging.
-oneOf :: Spec
-oneOf =
-  describe "oneOf" . modifyMaxSuccess (max Preferences.largePropertyMaxSuccess) $ do
-    prop "Dispatches correctly" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) -> idempotentIOProperty do
-      results <- IO.simulateReduction Actor.oneOf 5 10 messages
-      return
-        $ conjoin
-          [ sort (concat results) === sort (concat (replicate Preferences.concurrency messages))
-          ]
