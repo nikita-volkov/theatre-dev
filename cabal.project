@@ -5,5 +5,4 @@ allow-newer:
   , *:deepseq
   , *:primitive
   , *:text
-constraints:
-  stm ==2.5.1.0
+  , exceptions:*
