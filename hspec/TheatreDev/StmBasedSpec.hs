@@ -91,10 +91,12 @@ spec =
       it "Passes 1" do
         let emittersNum = 10
             messagesNum = 10
-        results <- simulateAllOf emittersNum [0 .. messagesNum - 1]
-        shouldBe (length results) (emittersNum * messagesNum * Preferences.concurrency)
+            messages = [0 .. messagesNum - 1]
+        results <- simulateAllOf emittersNum messages
+        shouldBe results (replicate emittersNum messages)
+        shouldBe (length results) (emittersNum * messagesNum)
       prop "" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) -> idempotentIOProperty do
-        results <- simulateAllOf size messages
+        results <- concat <$> simulateAllOf size messages
         return
           $ conjoin
             [ length results === length messages * size * Preferences.concurrency,
@@ -176,7 +178,7 @@ oneOf =
           [ sort results === sort (concat (replicate Preferences.concurrency messages))
           ]
 
-simulateAllOf :: (Show a) => Int -> [a] -> IO [a]
+simulateAllOf :: (Show a) => Int -> [a] -> IO [[a]]
 simulateAllOf size messages =
   do
     resultsVar <- newTVarIO []
@@ -188,7 +190,7 @@ simulateAllOf size messages =
           ( \state ->
               atomically
                 $ modifyTVar' resultsVar
-                $ mappend state
+                $ (:) state
           )
           ( \state msg ->
               return $ msg : state
