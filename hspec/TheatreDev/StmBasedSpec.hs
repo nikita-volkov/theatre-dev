@@ -17,6 +17,14 @@ import Prelude
 spec :: Spec
 spec =
   do
+    describe "kill" do
+      describe "When full" do
+        it "Does not" pending
+
+    describe "kill" do
+      describe "When full" do
+        it "Blocks until a slot is freed up" pending
+
     describe "spawnStatefulBatched" do
       let spawnIntUpdater step = Actor.spawnStatefulBatched @Int 0 (const (return ())) step
       let spawnUnit step = Actor.spawnStatefulBatched () (const (return ())) step
