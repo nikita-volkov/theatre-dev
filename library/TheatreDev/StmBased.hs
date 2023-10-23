@@ -22,7 +22,6 @@ module TheatreDev.StmBased
   )
 where
 
-import Data.UUID.V4 qualified as UuidV4
 import TheatreDev.Prelude
 import TheatreDev.StmBased.StmStructures.Runner (Runner)
 import TheatreDev.StmBased.StmStructures.Runner qualified as Runner
@@ -32,6 +31,7 @@ import TheatreDev.StmBased.Wait qualified as Wait
 
 -- |
 -- Controls of an actor, which processes the messages of type @message@.
+-- The processing runs on a dedicated green thread.
 --
 -- Provides abstraction over the message channel, thread-forking and killing.
 --
@@ -100,7 +100,7 @@ fromRunner runner =
 oneOf :: [Actor message] -> Actor message
 oneOf = tellComposition Tell.one
 
--- |
+-- | Distribute the message stream to all provided actors.
 --
 -- You can consider this being an interface to the Product monoid.
 allOf :: [Actor message] -> Actor message
@@ -136,53 +136,54 @@ tellComposition tellReducer actors =
 
 -- * Acquisition
 
--- |
--- Given an interpreter of messages,
--- fork a thread to run the handler daemon on and
--- produce a handle to control that actor.
---
--- Killing that actor will make it process all the messages in the queue first.
--- All the messages sent to it after killing won't be processed.
+-- | Spawn an actor which processes messages in isolated executions.
 spawnStatelessIndividual ::
-  (Show message) =>
   -- | Clean up when killed.
   IO () ->
-  -- | Interpreter of a message.
+  -- | Interpret a message.
   (message -> IO ()) ->
-  -- | Fork a thread to run the handler daemon on and
-  -- produce a handle to control it.
+  -- | Fork a thread to run the handler loop on and produce a handle to control it.
   IO (Actor message)
 spawnStatelessIndividual cleaner interpreter =
   -- TODO: Optimize by reimplementing directly.
   spawnStatefulIndividual () (const cleaner) (const interpreter)
 
+-- | Spawn an actor which processes all available messages in one execution.
 spawnStatelessBatched ::
-  (Show message) =>
   -- | Clean up when killed.
   IO () ->
-  -- | Interpreter of a batch of messages.
+  -- | Interpret a batch of messages.
   (NonEmpty message -> IO ()) ->
-  -- | Fork a thread to run the handler daemon on and
-  -- produce a handle to control it.
+  -- | Fork a thread to run the handler loop on and produce a handle to control it.
   IO (Actor message)
 spawnStatelessBatched cleaner interpreter =
   -- TODO: Optimize by reimplementing directly.
   spawnStatefulBatched () (const cleaner) (const interpreter)
 
+-- | Spawn an actor which processes messages in isolated executions
+-- and threads state.
 spawnStatefulIndividual ::
-  (Show message) =>
+  -- | Initial state.
   state ->
+  -- | Clean up when killed or exception is thrown..
   (state -> IO ()) ->
+  -- | Process a message and update state.
   (state -> message -> IO state) ->
+  -- | Fork a thread to run the handler loop on and produce a handle to control it.
   IO (Actor message)
 spawnStatefulIndividual zero finalizer step =
   spawnStatefulBatched zero finalizer $ foldM step
 
+-- | Spawn an actor which processes all available messages in one execution
+-- and threads state.
 spawnStatefulBatched ::
-  (Show message) =>
+  -- | Initial state.
   state ->
+  -- | Clean up when killed or exception is thrown..
   (state -> IO ()) ->
+  -- | Process a batch of messages and update state.
   (state -> NonEmpty message -> IO state) ->
+  -- | Fork a thread to run the handler loop on and produce a handle to control it.
   IO (Actor message)
 spawnStatefulBatched zero finalizer step =
   do
@@ -212,14 +213,24 @@ spawnStatefulBatched zero finalizer step =
 
 -- * Control
 
+-- | Add a message to the end of the queue of the
+-- messages to be processed by the provided actor.
 tell :: Actor message -> message -> IO ()
 tell actor =
   atomically . actor.tell
 
+-- | Command the actor to stop registering new messages,
+-- process all the registered ones and execute the clean up action.
+--
+-- This action executes immediately.
+-- If you want to block waiting for the actor to actually die,
+-- after 'kill' you can run 'wait'.
 kill :: Actor message -> IO ()
 kill actor =
   atomically actor.kill
 
+-- | Block waiting for the actor to die either due to getting killed
+-- or due to its interpreter action throwing an exception.
 wait :: Actor message -> IO ()
 wait actor =
   atomically actor.wait >>= maybe (pure ()) throwIO

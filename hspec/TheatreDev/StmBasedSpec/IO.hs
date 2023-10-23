@@ -5,8 +5,8 @@ import TheatreDev.StmBased (Actor)
 import TheatreDev.StmBased qualified as Actor
 import Prelude
 
-simulateReduction :: (Show a) => ([Actor a] -> Actor a) -> Int -> Int -> [a] -> IO [[a]]
-simulateReduction reducer actorsNum generatorsNum messages =
+simulateReduction :: Int -> Int -> ([Actor a] -> Actor a) -> [a] -> IO [[a]]
+simulateReduction actorsNum generatorsNum reducer messages =
   do
     resultsVar <- newTVarIO []
 

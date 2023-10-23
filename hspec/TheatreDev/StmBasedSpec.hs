@@ -8,7 +8,6 @@ import Data.IntSet qualified as IntSet
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck
-import TheatreDev.StmBased (Actor)
 import TheatreDev.StmBased qualified as Actor
 import TheatreDev.StmBasedSpec.IO qualified as IO
 import TheatreDev.StmBasedSpec.Preferences qualified as Preferences
@@ -17,6 +16,14 @@ import Prelude
 spec :: Spec
 spec =
   do
+    describe "kill" do
+      describe "When full" do
+        it "Does not" pending
+
+    describe "kill" do
+      describe "When full" do
+        it "Blocks until a slot is freed up" pending
+
     describe "spawnStatefulBatched" do
       let spawnIntUpdater step = Actor.spawnStatefulBatched @Int 0 (const (return ())) step
       let spawnUnit step = Actor.spawnStatefulBatched () (const (return ())) step
@@ -95,12 +102,12 @@ spec =
             messagesNum = 10
             actorsNum = 3
             messages = [0 .. messagesNum - 1]
-        results <- fmap (fmap sort) (IO.simulateReduction Actor.allOf actorsNum emittersNum messages)
+        results <- fmap (fmap sort) (IO.simulateReduction actorsNum emittersNum Actor.allOf messages)
         shouldBe results (replicate actorsNum (sort (concat (replicate emittersNum messages))))
         shouldBe (getSum (foldMap (Sum . length) results)) (actorsNum * emittersNum * messagesNum)
       prop "" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) ->
         idempotentIOProperty do
-          results <- sort . concat <$> IO.simulateReduction Actor.allOf Preferences.concurrency size messages
+          results <- sort . concat <$> IO.simulateReduction Preferences.concurrency size Actor.allOf messages
           return
             $ conjoin
               [ length results === length messages * size * Preferences.concurrency,
@@ -110,7 +117,7 @@ spec =
     describe "oneOf" . modifyMaxSuccess (max 1000) $ do
       prop "Dispatches correctly" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) ->
         idempotentIOProperty do
-          results <- sort . concat <$> IO.simulateReduction Actor.oneOf Preferences.concurrency size messages
+          results <- sort . concat <$> IO.simulateReduction Preferences.concurrency size Actor.oneOf messages
           return
             $ conjoin
               [ length results === length messages * size,
