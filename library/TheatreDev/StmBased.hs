@@ -32,6 +32,7 @@ import TheatreDev.StmBased.Wait qualified as Wait
 
 -- |
 -- Controls of an actor, which processes the messages of type @message@.
+-- The processing runs on a dedicated green thread.
 --
 -- Provides abstraction over the message channel, thread-forking and killing.
 --
@@ -138,8 +139,8 @@ tellComposition tellReducer actors =
 
 -- |
 -- Given an interpreter of messages,
--- fork a thread to run the handler daemon on and
--- produce a handle to control that actor.
+-- fork a thread to run the message handler loop on and
+-- produce a handle to control it.
 --
 -- Killing that actor will make it process all the messages in the queue first.
 -- All the messages sent to it after killing won't be processed.
@@ -167,17 +168,27 @@ spawnStatelessBatched cleaner interpreter =
   -- TODO: Optimize by reimplementing directly.
   spawnStatefulBatched () (const cleaner) (const interpreter)
 
+-- | Spawn an actor which processes messages in isolated executions
+-- and threads state.
 spawnStatefulIndividual ::
+  -- | Initial state.
   state ->
+  -- | Clean up when killed or exception is thrown..
   (state -> IO ()) ->
+  -- | Process a message and update state.
   (state -> message -> IO state) ->
   IO (Actor message)
 spawnStatefulIndividual zero finalizer step =
   spawnStatefulBatched zero finalizer $ foldM step
 
+-- | Spawn an actor which processes all available messages in one execution
+-- and threads state.
 spawnStatefulBatched ::
+  -- | Initial state.
   state ->
+  -- | Clean up when killed or exception is thrown..
   (state -> IO ()) ->
+  -- | Process a batch of messages and update state.
   (state -> NonEmpty message -> IO state) ->
   IO (Actor message)
 spawnStatefulBatched zero finalizer step =
