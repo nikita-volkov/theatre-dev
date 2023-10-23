@@ -97,4 +97,4 @@ releaseWithException Runner {..} exception =
 
 releaseNormally :: Runner a -> STM ()
 releaseNormally Runner {..} =
-  writeTMVar resVar Nothing
+  putTMVar resVar Nothing <|> pure ()
