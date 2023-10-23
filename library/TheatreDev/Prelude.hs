@@ -8,6 +8,7 @@ import Control.Arrow as Exports hiding (first, second)
 import Control.Category as Exports
 import Control.Concurrent as Exports
 import Control.Concurrent.Async as Exports (Concurrently (..))
+import Control.Concurrent.STM as Exports
 import Control.Exception as Exports
 import Control.Monad as Exports hiding (fail, forM, forM_, mapM, mapM_, msum, sequence, sequence_)
 import Control.Monad.Fail as Exports
