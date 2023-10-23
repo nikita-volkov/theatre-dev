@@ -22,7 +22,6 @@ module TheatreDev.StmBased
   )
 where
 
-import Data.UUID.V4 qualified as UuidV4
 import TheatreDev.Prelude
 import TheatreDev.StmBased.StmStructures.Runner (Runner)
 import TheatreDev.StmBased.StmStructures.Runner qualified as Runner
@@ -38,6 +37,9 @@ import TheatreDev.StmBased.Wait qualified as Wait
 --
 -- Monoid instance is not provided for the same reason it is not provided for numbers.
 -- This type supports both sum and product composition. See 'allOf' and 'oneOf'.
+--
+-- Killing an actor makes it process all the messages in the queue first.
+-- All the messages sent to it after killing get ignored.
 data Actor message = Actor
   { -- | Send a message to the actor.
     tell :: message -> STM (),
@@ -137,13 +139,7 @@ tellComposition tellReducer actors =
 
 -- * Acquisition
 
--- |
--- Given an interpreter of messages,
--- fork a thread to run the message handler loop on and
--- produce a handle to control it.
---
--- Killing that actor will make it process all the messages in the queue first.
--- All the messages sent to it after killing won't be processed.
+-- | Spawn an actor which processes messages in isolated executions.
 spawnStatelessIndividual ::
   -- | Clean up when killed.
   IO () ->
@@ -156,6 +152,7 @@ spawnStatelessIndividual cleaner interpreter =
   -- TODO: Optimize by reimplementing directly.
   spawnStatefulIndividual () (const cleaner) (const interpreter)
 
+-- | Spawn an actor which processes all available messages in one execution.
 spawnStatelessBatched ::
   -- | Clean up when killed.
   IO () ->
