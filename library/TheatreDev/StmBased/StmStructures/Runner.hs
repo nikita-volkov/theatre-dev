@@ -10,27 +10,37 @@ module TheatreDev.StmBased.StmStructures.Runner
     receiveSingle,
     receiveMultiple,
     releaseWithException,
+    releaseNormally,
+
+    -- * Inspection
+    getId,
   )
 where
 
 import Control.Concurrent.STM.TBQueue
 import Control.Concurrent.STM.TMVar
-import qualified TheatreDev.ExtrasFor.List as List
+import Data.UUID.V4 qualified as UuidV4
+import TheatreDev.ExtrasFor.List qualified as List
 import TheatreDev.ExtrasFor.TBQueue
 import TheatreDev.Prelude
 
 data Runner a = Runner
-  { queue :: TBQueue (Maybe a),
+  { queue :: TBQueue a,
     aliveVar :: TVar Bool,
-    resVar :: TMVar (Maybe SomeException)
+    resVar :: TMVar (Maybe SomeException),
+    id :: UUID
   }
 
-start :: STM (Runner a)
+getId :: Runner a -> UUID
+getId = (.id)
+
+start :: IO (Runner a)
 start =
   do
-    queue <- newTBQueue 1000
-    aliveVar <- newTVar True
-    resVar <- newEmptyTMVar @(Maybe SomeException)
+    queue <- newTBQueueIO 1000
+    aliveVar <- newTVarIO True
+    resVar <- newEmptyTMVarIO
+    id <- UuidV4.nextRandom
     return Runner {..}
 
 tell :: Runner a -> a -> STM ()
@@ -38,17 +48,18 @@ tell Runner {..} message =
   do
     alive <- readTVar aliveVar
     when alive do
-      writeTBQueue queue $ Just message
+      writeTBQueue queue message
 
 kill :: Runner a -> STM ()
 kill Runner {..} =
-  do
-    alive <- readTVar aliveVar
-    when alive do
-      writeTBQueue queue Nothing
+  writeTVar aliveVar False
 
 wait :: Runner a -> STM (Maybe SomeException)
-wait Runner {..} =
+wait Runner {..} = do
+  isAlive <- readTVar aliveVar
+  when isAlive retry
+  queueIsEmpty <- isEmptyTBQueue queue
+  unless queueIsEmpty retry
   readTMVar resVar
 
 receiveSingle ::
@@ -57,41 +68,33 @@ receiveSingle ::
   STM (Maybe a)
 receiveSingle Runner {..} =
   do
-    message <- readTBQueue queue
-    case message of
-      Just message -> return (Just message)
-      Nothing -> do
-        writeTVar aliveVar False
-        putTMVar resVar Nothing
-        return Nothing
+    alive <- readTVar aliveVar
+    if alive
+      then Just <$> readTBQueue queue
+      else return Nothing
 
 receiveMultiple ::
+  (Show a) =>
   Runner a ->
   STM (Maybe (NonEmpty a))
 receiveMultiple Runner {..} =
   do
-    (messages, remainingCommands) <- do
-      queueLength <- lengthTBQueue queue
-      head <- readTBQueue queue
-      tail <- simplerFlushTBQueue queue
-      return $ List.splitWhileJust $ head : tail
+    messages <- simplerFlushTBQueue queue
     case messages of
-      -- Implies that the tail is not empty,
-      -- because we have at least one element.
-      -- And that it starts with a Nothing.
       [] -> do
-        forM_ remainingCommands $ unGetTBQueue queue
-        writeTVar aliveVar False
-        putTMVar resVar Nothing
-        return Nothing
-      messagesHead : messagesTail -> do
-        unless (null remainingCommands) do
-          unGetTBQueue queue Nothing
+        alive <- readTVar aliveVar
+        if alive
+          then retry
+          else return Nothing
+      messagesHead : messagesTail ->
         return $ Just $ messagesHead :| messagesTail
 
 releaseWithException :: Runner a -> SomeException -> STM ()
 releaseWithException Runner {..} exception =
   do
     simplerFlushTBQueue queue
-    writeTVar aliveVar False
     putTMVar resVar (Just exception)
+
+releaseNormally :: Runner a -> STM ()
+releaseNormally Runner {..} =
+  putTMVar resVar Nothing <|> pure ()

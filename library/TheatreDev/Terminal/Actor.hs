@@ -16,10 +16,10 @@ module TheatreDev.Terminal.Actor
   )
 where
 
-import qualified Control.Concurrent.Chan.Unagi as E
+import Control.Concurrent.Chan.Unagi qualified as E
 import Control.Concurrent.STM.TBQueue
 import Control.Concurrent.STM.TMVar
-import qualified TheatreDev.ExtrasFor.List as List
+import TheatreDev.ExtrasFor.List qualified as List
 import TheatreDev.ExtrasFor.TBQueue
 import TheatreDev.Prelude
 

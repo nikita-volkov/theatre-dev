@@ -5,3 +5,4 @@ allow-newer:
   , *:deepseq
   , *:primitive
   , *:text
+  , exceptions:*

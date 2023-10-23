@@ -1,6 +1,6 @@
 module TheatreDev.StmBased.Tell where
 
-import qualified Data.Vector as Vector
+import Data.Vector qualified as Vector
 import TheatreDev.Prelude
 
 type Tell a = a -> STM ()

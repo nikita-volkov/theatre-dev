@@ -12,7 +12,7 @@ module TheatreDev.Perpetual
   )
 where
 
-import qualified Control.Concurrent.Chan.Unagi as Unagi
+import Control.Concurrent.Chan.Unagi qualified as Unagi
 import TheatreDev.Prelude
 
 -- |

@@ -6,13 +6,13 @@ import TheatreDev.Prelude
 flushNonEmptyTBQueue :: TBQueue a -> STM (NonEmpty a)
 flushNonEmptyTBQueue x = do
   head <- readTBQueue x
-  tail <- flushTBQueue x
+  tail <- simplerFlushTBQueue x
   return (head :| tail)
 
 -- | Get a list of all entries in the queue without removing them.
 inspectTBQueue :: TBQueue a -> STM [a]
 inspectTBQueue queue = do
-  list <- flushTBQueue queue
+  list <- simplerFlushTBQueue queue
   forM_ list $ writeTBQueue queue
   return list
 

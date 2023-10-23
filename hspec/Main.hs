@@ -1,7 +1,7 @@
 module Main (main) where
 
 import Test.Hspec
-import qualified TheatreDev.StmBasedSpec
+import TheatreDev.StmBasedSpec qualified
 import Prelude
 
 main :: IO ()

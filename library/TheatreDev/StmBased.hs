@@ -22,12 +22,13 @@ module TheatreDev.StmBased
   )
 where
 
+import Data.UUID.V4 qualified as UuidV4
 import TheatreDev.Prelude
 import TheatreDev.StmBased.StmStructures.Runner (Runner)
-import qualified TheatreDev.StmBased.StmStructures.Runner as Runner
+import TheatreDev.StmBased.StmStructures.Runner qualified as Runner
 import TheatreDev.StmBased.Tell (Tell)
-import qualified TheatreDev.StmBased.Tell as Tell
-import qualified TheatreDev.StmBased.Wait as Wait
+import TheatreDev.StmBased.Tell qualified as Tell
+import TheatreDev.StmBased.Wait qualified as Wait
 
 -- |
 -- Controls of an actor, which processes the messages of type @message@.
@@ -42,32 +43,37 @@ data Actor message = Actor
     -- | Kill the actor.
     kill :: STM (),
     -- | Wait for the actor to die due to error or being killed.
-    wait :: STM (Maybe SomeException)
+    wait :: STM (Maybe SomeException),
+    -- | IDs of the constituent actors.
+    -- Useful for debugging.
+    ids :: [UUID]
   }
 
 instance Contravariant Actor where
-  contramap fn (Actor tell kill wait) =
-    Actor (tell . fn) kill wait
+  contramap fn (Actor tell kill wait ids) =
+    Actor (tell . fn) kill wait ids
 
 instance Divisible Actor where
   conquer =
-    Actor (const (return ())) (return ()) (return Nothing)
-  divide divisor (Actor lTell lKill lWait) (Actor rTell rKill rWait) =
-    Actor tell kill wait
-    where
-      tell msg = case divisor msg of (lMsg, rMsg) -> lTell lMsg >> rTell rMsg
-      kill = lKill >> rKill
-      wait = Wait.both lWait rWait
+    Actor (const (return ())) (return ()) (return Nothing) []
+  divide divisor (Actor lTell lKill lWait lIds) (Actor rTell rKill rWait rIds) =
+    Actor
+      { tell = \msg -> case divisor msg of (lMsg, rMsg) -> lTell lMsg >> rTell rMsg,
+        kill = lKill >> rKill,
+        wait = Wait.both lWait rWait,
+        ids = lIds <> rIds
+      }
 
 instance Decidable Actor where
   lose fn =
-    Actor (const (return ()) . absurd . fn) (return ()) (return Nothing)
-  choose choice (Actor lTell lKill lWait) (Actor rTell rKill rWait) =
-    Actor tell kill wait
-    where
-      tell = either lTell rTell . choice
-      kill = lKill >> rKill
-      wait = Wait.both lWait rWait
+    Actor (const (return ()) . absurd . fn) (return ()) (return Nothing) []
+  choose choice (Actor lTell lKill lWait lIds) (Actor rTell rKill rWait rIds) =
+    Actor
+      { tell = either lTell rTell . choice,
+        kill = lKill >> rKill,
+        wait = Wait.both lWait rWait,
+        ids = lIds <> rIds
+      }
 
 -- * Composition
 
@@ -76,7 +82,8 @@ fromRunner runner =
   Actor
     { tell = Runner.tell runner,
       kill = Runner.kill runner,
-      wait = Runner.wait runner
+      wait = Runner.wait runner,
+      ids = [Runner.getId runner]
     }
 
 -- | Distribute the message stream across actors.
@@ -109,7 +116,6 @@ allOf = tellComposition Tell.all
 -- The implementation applies a modulo equal to the amount
 -- of actors to the hash and thus determines the index
 -- of the actor to dispatch the message to.
---
 -- This is inspired by how partitioning is done in Kafka.
 byKeyHash ::
   -- | Function extracting the key from the message and hashing it.
@@ -124,7 +130,8 @@ tellComposition tellReducer actors =
   Actor
     { tell = tellReducer (fmap (.tell) actors),
       kill = traverse_ (.kill) actors,
-      wait = Wait.all (fmap (.wait) actors)
+      wait = Wait.all (fmap (.wait) actors),
+      ids = foldMap (.ids) actors
     }
 
 -- * Acquisition
@@ -137,65 +144,49 @@ tellComposition tellReducer actors =
 -- Killing that actor will make it process all the messages in the queue first.
 -- All the messages sent to it after killing won't be processed.
 spawnStatelessIndividual ::
+  (Show message) =>
+  -- | Clean up when killed.
+  IO () ->
   -- | Interpreter of a message.
   (message -> IO ()) ->
-  -- | Clean up when killed.
-  IO () ->
   -- | Fork a thread to run the handler daemon on and
   -- produce a handle to control it.
   IO (Actor message)
-spawnStatelessIndividual interpreter cleaner =
+spawnStatelessIndividual cleaner interpreter =
   -- TODO: Optimize by reimplementing directly.
-  spawnStatefulIndividual () (const interpreter) (const cleaner)
+  spawnStatefulIndividual () (const cleaner) (const interpreter)
 
 spawnStatelessBatched ::
-  -- | Interpreter of a batch of messages.
-  (NonEmpty message -> IO ()) ->
+  (Show message) =>
   -- | Clean up when killed.
   IO () ->
+  -- | Interpreter of a batch of messages.
+  (NonEmpty message -> IO ()) ->
   -- | Fork a thread to run the handler daemon on and
   -- produce a handle to control it.
   IO (Actor message)
-spawnStatelessBatched interpreter cleaner =
+spawnStatelessBatched cleaner interpreter =
   -- TODO: Optimize by reimplementing directly.
-  spawnStatefulBatched () (const interpreter) (const cleaner)
+  spawnStatefulBatched () (const cleaner) (const interpreter)
 
 spawnStatefulIndividual ::
+  (Show message) =>
   state ->
-  (state -> message -> IO state) ->
   (state -> IO ()) ->
+  (state -> message -> IO state) ->
   IO (Actor message)
-spawnStatefulIndividual zero step finalizer =
-  do
-    runner <- atomically Runner.start
-    forkIOWithUnmask $ \unmask ->
-      let loop !state =
-            do
-              message <- atomically $ Runner.receiveSingle runner
-              case message of
-                Just message ->
-                  do
-                    result <- try @SomeException $ unmask $ step state message
-                    case result of
-                      Right newState ->
-                        loop newState
-                      Left exception ->
-                        do
-                          atomically $ Runner.releaseWithException runner exception
-                          finalizer state
-                Nothing ->
-                  finalizer state
-       in loop zero
-    return $ fromRunner runner
+spawnStatefulIndividual zero finalizer step =
+  spawnStatefulBatched zero finalizer $ foldM step
 
 spawnStatefulBatched ::
+  (Show message) =>
   state ->
-  (state -> NonEmpty message -> IO state) ->
   (state -> IO ()) ->
+  (state -> NonEmpty message -> IO state) ->
   IO (Actor message)
-spawnStatefulBatched zero step finalizer =
+spawnStatefulBatched zero finalizer step =
   do
-    runner <- atomically Runner.start
+    runner <- Runner.start
     forkIOWithUnmask $ \unmask ->
       let loop !state =
             do
@@ -203,16 +194,19 @@ spawnStatefulBatched zero step finalizer =
               case messages of
                 Just nonEmptyMessages ->
                   do
-                    result <- try @SomeException $ unmask $ step state nonEmptyMessages
+                    result <- try $ unmask $ step state nonEmptyMessages
                     case result of
                       Right newState ->
                         loop newState
                       Left exception ->
-                        do
-                          atomically $ Runner.releaseWithException runner exception
-                          finalizer state
+                        finally (finalizer state)
+                          $ atomically
+                          $ Runner.releaseWithException runner exception
                 -- Empty batch means that the runner is finished.
-                Nothing -> finalizer state
+                Nothing ->
+                  finally (finalizer state)
+                    $ atomically
+                    $ Runner.releaseNormally runner
        in loop zero
     return $ fromRunner runner
 
