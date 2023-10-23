@@ -74,7 +74,6 @@ receiveSingle Runner {..} =
       else return Nothing
 
 receiveMultiple ::
-  (Show a) =>
   Runner a ->
   STM (Maybe (NonEmpty a))
 receiveMultiple Runner {..} =

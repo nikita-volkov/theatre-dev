@@ -144,7 +144,6 @@ tellComposition tellReducer actors =
 -- Killing that actor will make it process all the messages in the queue first.
 -- All the messages sent to it after killing won't be processed.
 spawnStatelessIndividual ::
-  (Show message) =>
   -- | Clean up when killed.
   IO () ->
   -- | Interpreter of a message.
@@ -157,7 +156,6 @@ spawnStatelessIndividual cleaner interpreter =
   spawnStatefulIndividual () (const cleaner) (const interpreter)
 
 spawnStatelessBatched ::
-  (Show message) =>
   -- | Clean up when killed.
   IO () ->
   -- | Interpreter of a batch of messages.
@@ -170,7 +168,6 @@ spawnStatelessBatched cleaner interpreter =
   spawnStatefulBatched () (const cleaner) (const interpreter)
 
 spawnStatefulIndividual ::
-  (Show message) =>
   state ->
   (state -> IO ()) ->
   (state -> message -> IO state) ->
@@ -179,7 +176,6 @@ spawnStatefulIndividual zero finalizer step =
   spawnStatefulBatched zero finalizer $ foldM step
 
 spawnStatefulBatched ::
-  (Show message) =>
   state ->
   (state -> IO ()) ->
   (state -> NonEmpty message -> IO state) ->
