@@ -55,10 +55,6 @@ kill Runner {..} =
 
 wait :: Runner a -> STM (Maybe SomeException)
 wait Runner {..} = do
-  receives <- readTVar receivesVar
-  when receives retry
-  queueIsEmpty <- isEmptyTBQueue queue
-  unless queueIsEmpty retry
   readTMVar resVar
 
 receiveSingle ::
