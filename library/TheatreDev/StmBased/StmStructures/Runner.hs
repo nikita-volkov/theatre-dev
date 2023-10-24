@@ -25,7 +25,7 @@ import TheatreDev.Prelude
 
 data Runner a = Runner
   { queue :: TBQueue a,
-    aliveVar :: TVar Bool,
+    receivesVar :: TVar Bool,
     resVar :: TMVar (Maybe SomeException),
     id :: UUID
   }
@@ -37,7 +37,7 @@ start :: IO (Runner a)
 start =
   do
     queue <- newTBQueueIO 1000
-    aliveVar <- newTVarIO True
+    receivesVar <- newTVarIO True
     resVar <- newEmptyTMVarIO
     id <- UuidV4.nextRandom
     return Runner {..}
@@ -45,18 +45,18 @@ start =
 tell :: Runner a -> a -> STM ()
 tell Runner {..} message =
   do
-    alive <- readTVar aliveVar
-    when alive do
+    receives <- readTVar receivesVar
+    when receives do
       writeTBQueue queue message
 
 kill :: Runner a -> STM ()
 kill Runner {..} =
-  writeTVar aliveVar False
+  writeTVar receivesVar False
 
 wait :: Runner a -> STM (Maybe SomeException)
 wait Runner {..} = do
-  isAlive <- readTVar aliveVar
-  when isAlive retry
+  receives <- readTVar receivesVar
+  when receives retry
   queueIsEmpty <- isEmptyTBQueue queue
   unless queueIsEmpty retry
   readTMVar resVar
@@ -67,8 +67,8 @@ receiveSingle ::
   STM (Maybe a)
 receiveSingle Runner {..} =
   do
-    alive <- readTVar aliveVar
-    if alive
+    receives <- readTVar receivesVar
+    if receives
       then Just <$> readTBQueue queue
       else return Nothing
 
@@ -80,8 +80,8 @@ receiveMultiple Runner {..} =
     messages <- simplerFlushTBQueue queue
     case messages of
       [] -> do
-        alive <- readTVar aliveVar
-        if alive
+        receives <- readTVar receivesVar
+        if receives
           then retry
           else return Nothing
       messagesHead : messagesTail ->
