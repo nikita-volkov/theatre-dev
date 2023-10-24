@@ -67,10 +67,15 @@ receiveSingle ::
   STM (Maybe a)
 receiveSingle Runner {..} =
   do
-    receives <- readTVar receivesVar
-    if receives
-      then Just <$> readTBQueue queue
-      else return Nothing
+    readResult <- tryReadTBQueue queue
+    case readResult of
+      Nothing -> do
+        receives <- readTVar receivesVar
+        if receives
+          then retry
+          else return Nothing
+      Just message ->
+        return (Just message)
 
 receiveMultiple ::
   Runner a ->
