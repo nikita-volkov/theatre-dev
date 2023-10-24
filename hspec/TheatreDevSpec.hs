@@ -18,11 +18,13 @@ spec =
   do
     describe "kill" do
       describe "When full" do
-        it "Does not" pending
+        it "Does not block" pending
+        it "Lets all messages scheduled before be processed" pending
+        it "Makes all messages scheduled after be ignored" pending
 
-    describe "kill" do
+    describe "wait" do
       describe "When full" do
-        it "Blocks until a slot is freed up" pending
+        it "Blocks until all messages are processed" pending
 
     describe "spawnStatefulBatched" do
       let spawnIntUpdater step = Actor.spawnStatefulBatched @Int 0 (const (return ())) step
