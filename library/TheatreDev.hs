@@ -1,4 +1,4 @@
-module TheatreDev.StmBased
+module TheatreDev
   ( Actor,
 
     -- * Acquisition
@@ -20,11 +20,11 @@ module TheatreDev.StmBased
 where
 
 import TheatreDev.Prelude
-import TheatreDev.StmBased.StmStructures.Runner (Runner)
-import TheatreDev.StmBased.StmStructures.Runner qualified as Runner
-import TheatreDev.StmBased.Tell (Tell)
-import TheatreDev.StmBased.Tell qualified as Tell
-import TheatreDev.StmBased.Wait qualified as Wait
+import TheatreDev.StmStructures.Runner (Runner)
+import TheatreDev.StmStructures.Runner qualified as Runner
+import TheatreDev.Tell (Tell)
+import TheatreDev.Tell qualified as Tell
+import TheatreDev.Wait qualified as Wait
 
 -- |
 -- Controls of an actor, which processes the messages of type @message@.

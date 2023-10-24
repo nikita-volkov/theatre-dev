@@ -8,7 +8,6 @@ description:
   Don\'t expect this lib to maintain a stable API.
   Once clearly useful abstractions emerge, they'll be moved to the
   \"theatre\" lib.
-  The namespace "TheatreDev.*" implies the name of an experimental API.
 
 stability:     experimental
 homepage:      https://github.com/nikita-volkov/theatre-dev
@@ -83,14 +82,14 @@ common test
 library
   import:          base
   hs-source-dirs:  library
-  exposed-modules: TheatreDev.StmBased
+  exposed-modules: TheatreDev
   other-modules:
     TheatreDev.ExtrasFor.List
     TheatreDev.ExtrasFor.TBQueue
     TheatreDev.Prelude
-    TheatreDev.StmBased.StmStructures.Runner
-    TheatreDev.StmBased.Tell
-    TheatreDev.StmBased.Wait
+    TheatreDev.StmStructures.Runner
+    TheatreDev.Tell
+    TheatreDev.Wait
 
   build-depends:
     , base >=4.16 && <5
@@ -105,9 +104,9 @@ test-suite hspec
   hs-source-dirs: hspec
   main-is:        Main.hs
   other-modules:
-    TheatreDev.StmBasedSpec
-    TheatreDev.StmBasedSpec.IO
-    TheatreDev.StmBasedSpec.Preferences
+    TheatreDevSpec
+    TheatreDevSpec.IO
+    TheatreDevSpec.Preferences
 
   build-depends:
     , async

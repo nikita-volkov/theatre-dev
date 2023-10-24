@@ -1,4 +1,4 @@
-module TheatreDev.StmBasedSpec.Preferences where
+module TheatreDevSpec.Preferences where
 
 import Prelude
 

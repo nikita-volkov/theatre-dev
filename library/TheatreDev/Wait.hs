@@ -1,4 +1,4 @@
-module TheatreDev.StmBased.Wait where
+module TheatreDev.Wait where
 
 import TheatreDev.Prelude
 

@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-unused-local-binds -Wno-unused-binds #-}
 
-module TheatreDev.StmBasedSpec (spec) where
+module TheatreDevSpec (spec) where
 
 import Control.Concurrent.Async
 import Data.IntMap.Strict qualified as IntMap
@@ -8,9 +8,9 @@ import Data.IntSet qualified as IntSet
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck
-import TheatreDev.StmBased qualified as Actor
-import TheatreDev.StmBasedSpec.IO qualified as IO
-import TheatreDev.StmBasedSpec.Preferences qualified as Preferences
+import TheatreDev qualified as Actor
+import TheatreDevSpec.IO qualified as IO
+import TheatreDevSpec.Preferences qualified as Preferences
 import Prelude
 
 spec :: Spec

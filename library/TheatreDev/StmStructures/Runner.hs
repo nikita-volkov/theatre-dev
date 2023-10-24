@@ -1,4 +1,4 @@
-module TheatreDev.StmBased.StmStructures.Runner
+module TheatreDev.StmStructures.Runner
   ( Runner,
     start,
     tell,

@@ -1,4 +1,4 @@
-module TheatreDev.StmBased.Tell where
+module TheatreDev.Tell where
 
 import Data.Vector qualified as Vector
 import TheatreDev.Prelude
