@@ -92,8 +92,10 @@ releaseWithException :: Runner a -> SomeException -> STM ()
 releaseWithException Runner {..} exception =
   do
     simplerFlushTBQueue queue
+    writeTVar receivesVar False
     putTMVar resVar (Just exception)
 
 releaseNormally :: Runner a -> STM ()
-releaseNormally Runner {..} =
+releaseNormally Runner {..} = do
+  writeTVar receivesVar False
   putTMVar resVar Nothing <|> pure ()
