@@ -78,7 +78,7 @@ receiveMultiple ::
   STM (Maybe (NonEmpty a))
 receiveMultiple Runner {..} =
   do
-    messages <- simplerFlushTBQueue queue
+    messages <- correctFlushTBQueue queue
     case messages of
       [] -> do
         receives <- readTVar receivesVar
@@ -91,7 +91,7 @@ receiveMultiple Runner {..} =
 releaseWithException :: Runner a -> SomeException -> STM ()
 releaseWithException Runner {..} exception =
   do
-    simplerFlushTBQueue queue
+    correctFlushTBQueue queue
     writeTVar receivesVar False
     putTMVar resVar (Just exception)
 
