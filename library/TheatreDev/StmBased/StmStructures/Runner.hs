@@ -20,7 +20,6 @@ where
 import Control.Concurrent.STM.TBQueue
 import Control.Concurrent.STM.TMVar
 import Data.UUID.V4 qualified as UuidV4
-import TheatreDev.ExtrasFor.List qualified as List
 import TheatreDev.ExtrasFor.TBQueue
 import TheatreDev.Prelude
 
