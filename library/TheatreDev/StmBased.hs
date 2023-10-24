@@ -138,7 +138,7 @@ tellComposition tellReducer actors =
 
 -- | Spawn an actor which processes messages in isolated executions.
 spawnStatelessIndividual ::
-  -- | Clean up when killed.
+  -- | Clean up when killed or exception is thrown.
   IO () ->
   -- | Interpret a message.
   (message -> IO ()) ->
@@ -150,7 +150,7 @@ spawnStatelessIndividual cleaner interpreter =
 
 -- | Spawn an actor which processes all available messages in one execution.
 spawnStatelessBatched ::
-  -- | Clean up when killed.
+  -- | Clean up when killed or exception is thrown.
   IO () ->
   -- | Interpret a batch of messages.
   (NonEmpty message -> IO ()) ->
@@ -165,7 +165,7 @@ spawnStatelessBatched cleaner interpreter =
 spawnStatefulIndividual ::
   -- | Initial state.
   state ->
-  -- | Clean up when killed or exception is thrown..
+  -- | Clean up when killed or exception is thrown.
   (state -> IO ()) ->
   -- | Process a message and update state.
   (state -> message -> IO state) ->
@@ -179,7 +179,7 @@ spawnStatefulIndividual zero finalizer step =
 spawnStatefulBatched ::
   -- | Initial state.
   state ->
-  -- | Clean up when killed or exception is thrown..
+  -- | Clean up when killed or exception is thrown.
   (state -> IO ()) ->
   -- | Process a batch of messages and update state.
   (state -> NonEmpty message -> IO state) ->
@@ -231,6 +231,7 @@ kill actor =
 
 -- | Block waiting for the actor to die either due to getting killed
 -- or due to its interpreter action throwing an exception.
+-- The exception will get rethrown here.
 wait :: Actor message -> IO ()
 wait actor =
   atomically actor.wait >>= maybe (pure ()) throwIO
