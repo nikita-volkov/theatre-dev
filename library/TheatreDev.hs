@@ -33,7 +33,7 @@ import TheatreDev.Wait qualified as Wait
 -- Provides abstraction over the message channel, thread-forking and killing.
 --
 -- Monoid instance is not provided for the same reason it is not provided for numbers.
--- This type supports both sum and product composition. See 'allOf' and 'firstAvailableOneOf'.
+-- This type supports both sum and product composition. See 'allOf', 'firstAvailableOneOf' and 'byKeyHashOneOf'.
 data Actor message = Actor
   { -- | Send a message to the actor.
     tell :: message -> STM (),
