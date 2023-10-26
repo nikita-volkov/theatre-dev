@@ -13,9 +13,9 @@ module TheatreDev
     wait,
 
     -- * Composition
-    oneOf,
-    allOf,
+    firstAvailable,
     byKeyHash,
+    allOf,
   )
 where
 
@@ -33,7 +33,7 @@ import TheatreDev.Wait qualified as Wait
 -- Provides abstraction over the message channel, thread-forking and killing.
 --
 -- Monoid instance is not provided for the same reason it is not provided for numbers.
--- This type supports both sum and product composition. See 'allOf' and 'oneOf'.
+-- This type supports both sum and product composition. See 'allOf' and 'firstAvailable'.
 data Actor message = Actor
   { -- | Send a message to the actor.
     tell :: message -> STM (),
@@ -91,17 +91,11 @@ fromRunner runner =
 --
 -- > spawnPool :: Int -> IO (Actor message) -> IO (Actor message)
 -- > spawnPool size spawn =
--- >   oneOf <$> replicateM size spawn
+-- >   firstAvailable <$> replicateM size spawn
 --
 -- You can consider this being an interface to the Sum monoid.
-oneOf :: [Actor message] -> Actor message
-oneOf = tellComposition Tell.one
-
--- | Distribute the message stream to all provided actors.
---
--- You can consider this being an interface to the Product monoid.
-allOf :: [Actor message] -> Actor message
-allOf = tellComposition Tell.all
+firstAvailable :: [Actor message] -> Actor message
+firstAvailable = tellComposition Tell.one
 
 -- |
 -- Dispatch the message across actors based on a key hash.
@@ -121,6 +115,12 @@ byKeyHash ::
   [Actor message] ->
   Actor message
 byKeyHash = tellComposition . Tell.byKeyHash
+
+-- | Distribute the message stream to all provided actors.
+--
+-- You can consider this being an interface to the Product monoid.
+allOf :: [Actor message] -> Actor message
+allOf = tellComposition Tell.all
 
 tellComposition :: ([Tell message] -> Tell message) -> [Actor message] -> Actor message
 tellComposition tellReducer actors =

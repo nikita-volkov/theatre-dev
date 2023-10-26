@@ -116,10 +116,10 @@ spec =
                 results === sort (concat (replicate (size * Preferences.concurrency) messages))
               ]
 
-    describe "oneOf" . modifyMaxSuccess (max 1000) $ do
+    describe "firstAvailable" . modifyMaxSuccess (max 1000) $ do
       prop "Dispatches correctly" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) ->
         idempotentIOProperty do
-          results <- sort . concat <$> IO.simulateReduction Preferences.concurrency size Actor.oneOf messages
+          results <- sort . concat <$> IO.simulateReduction Preferences.concurrency size Actor.firstAvailable messages
           return
             $ conjoin
               [ length results === length messages * size,
