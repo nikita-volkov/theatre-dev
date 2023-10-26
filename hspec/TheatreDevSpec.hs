@@ -116,10 +116,10 @@ spec =
                 results === sort (concat (replicate (size * Preferences.concurrency) messages))
               ]
 
-    describe "firstAvailable" . modifyMaxSuccess (max 1000) $ do
+    describe "firstAvailableOneOf" . modifyMaxSuccess (max 1000) $ do
       prop "Dispatches correctly" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) ->
         idempotentIOProperty do
-          results <- sort . concat <$> IO.simulateReduction Preferences.concurrency size Actor.firstAvailable messages
+          results <- sort . concat <$> IO.simulateReduction Preferences.concurrency size Actor.firstAvailableOneOf messages
           return
             $ conjoin
               [ length results === length messages * size,
@@ -127,11 +127,11 @@ spec =
                   === sort (concat (replicate (size) messages))
               ]
 
-    describe "byKeyHash" . modifyMaxSuccess (max Preferences.largePropertyMaxSuccess) $ do
+    describe "byKeyHashOneOf" . modifyMaxSuccess (max Preferences.largePropertyMaxSuccess) $ do
       prop "Dispatches individually" $ forAll (chooseInt (0, 99)) $ \size -> forAll arbitrary $ \(messages :: [Int]) -> idempotentIOProperty $ do
         resultsVar <- newTVarIO []
         actor <-
-          fmap (Actor.byKeyHash id)
+          fmap (Actor.byKeyHashOneOf id)
             $ replicateM size
             $ Actor.spawnStatefulIndividual
               IntMap.empty
