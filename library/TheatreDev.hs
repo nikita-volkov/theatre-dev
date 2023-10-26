@@ -13,9 +13,9 @@ module TheatreDev
     wait,
 
     -- * Composition
-    oneOf,
+    firstAvailableOneOf,
+    byKeyHashOneOf,
     allOf,
-    byKeyHash,
   )
 where
 
@@ -33,7 +33,7 @@ import TheatreDev.Wait qualified as Wait
 -- Provides abstraction over the message channel, thread-forking and killing.
 --
 -- Monoid instance is not provided for the same reason it is not provided for numbers.
--- This type supports both sum and product composition. See 'allOf' and 'oneOf'.
+-- This type supports both sum and product composition. See 'allOf', 'firstAvailableOneOf' and 'byKeyHashOneOf'.
 data Actor message = Actor
   { -- | Send a message to the actor.
     tell :: message -> STM (),
@@ -91,17 +91,11 @@ fromRunner runner =
 --
 -- > spawnPool :: Int -> IO (Actor message) -> IO (Actor message)
 -- > spawnPool size spawn =
--- >   oneOf <$> replicateM size spawn
+-- >   firstAvailableOneOf <$> replicateM size spawn
 --
 -- You can consider this being an interface to the Sum monoid.
-oneOf :: [Actor message] -> Actor message
-oneOf = tellComposition Tell.one
-
--- | Distribute the message stream to all provided actors.
---
--- You can consider this being an interface to the Product monoid.
-allOf :: [Actor message] -> Actor message
-allOf = tellComposition Tell.all
+firstAvailableOneOf :: [Actor message] -> Actor message
+firstAvailableOneOf = tellComposition Tell.one
 
 -- |
 -- Dispatch the message across actors based on a key hash.
@@ -114,13 +108,19 @@ allOf = tellComposition Tell.all
 -- of actors to the hash and thus determines the index
 -- of the actor to dispatch the message to.
 -- This is inspired by how partitioning is done in Kafka.
-byKeyHash ::
+byKeyHashOneOf ::
   -- | Function extracting the key from the message and hashing it.
   (message -> Int) ->
   -- | Pool of actors.
   [Actor message] ->
   Actor message
-byKeyHash = tellComposition . Tell.byKeyHash
+byKeyHashOneOf = tellComposition . Tell.byKeyHashOneOf
+
+-- | Distribute the message stream to all provided actors.
+--
+-- You can consider this being an interface to the Product monoid.
+allOf :: [Actor message] -> Actor message
+allOf = tellComposition Tell.all
 
 tellComposition :: ([Tell message] -> Tell message) -> [Actor message] -> Actor message
 tellComposition tellReducer actors =

@@ -21,8 +21,8 @@ all :: [Tell a] -> Tell a
 all tells msg =
   traverse_ (\tell -> tell msg) tells
 
-byKeyHash :: (a -> Int) -> [Tell a] -> Tell a
-byKeyHash proj tells =
+byKeyHashOneOf :: (a -> Int) -> [Tell a] -> Tell a
+byKeyHashOneOf proj tells =
   let vector = Vector.fromList tells
       vectorLength = Vector.length vector
    in case vectorLength of
