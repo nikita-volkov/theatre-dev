@@ -13,6 +13,7 @@ jobs:
         include:
           - ghc: 9.2.1
             ghc-options: ""
+            ignore-haddock: true
           - ghc: latest
 
     runs-on: ubuntu-latest
