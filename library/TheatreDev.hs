@@ -74,15 +74,6 @@ instance Decidable Actor where
 
 -- * Composition
 
-fromRunner :: Runner a -> Actor a
-fromRunner runner =
-  Actor
-    { tell = Runner.tell runner,
-      kill = Runner.kill runner,
-      wait = Runner.wait runner,
-      ids = [Runner.getId runner]
-    }
-
 -- | Distribute the message stream across actors.
 -- The message gets delivered to the first available one.
 --
@@ -122,6 +113,8 @@ byKeyHashOneOf = tellComposition . Tell.byKeyHashOneOf
 allOf :: [Actor message] -> Actor message
 allOf = tellComposition Tell.all
 
+-- ** Helpers
+
 tellComposition :: ([Tell message] -> Tell message) -> [Actor message] -> Actor message
 tellComposition tellReducer actors =
   Actor
@@ -129,6 +122,15 @@ tellComposition tellReducer actors =
       kill = traverse_ (.kill) actors,
       wait = Wait.all (fmap (.wait) actors),
       ids = foldMap (.ids) actors
+    }
+
+fromRunner :: Runner a -> Actor a
+fromRunner runner =
+  Actor
+    { tell = Runner.tell runner,
+      kill = Runner.kill runner,
+      wait = Runner.wait runner,
+      ids = [Runner.getId runner]
     }
 
 -- * Acquisition
