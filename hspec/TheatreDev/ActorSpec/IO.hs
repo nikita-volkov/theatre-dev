@@ -1,8 +1,8 @@
-module TheatreDevSpec.IO where
+module TheatreDev.ActorSpec.IO where
 
 import Control.Concurrent.Async
-import TheatreDev (Actor)
-import TheatreDev qualified as Actor
+import TheatreDev.Actor (Actor)
+import TheatreDev.Actor qualified as Actor
 import Prelude
 
 simulateReduction :: Int -> Int -> ([Actor a] -> Actor a) -> [a] -> IO [[a]]

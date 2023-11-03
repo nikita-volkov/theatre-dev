@@ -1,4 +1,4 @@
-module TheatreDev
+module TheatreDev.Actor
   ( Actor,
 
     -- * Acquisition

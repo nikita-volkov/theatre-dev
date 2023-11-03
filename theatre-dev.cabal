@@ -83,7 +83,7 @@ library
   import:          base
   hs-source-dirs:  library
   exposed-modules:
-    TheatreDev
+    TheatreDev.Actor
     TheatreDev.Daemon
 
   other-modules:
@@ -107,9 +107,9 @@ test-suite hspec
   hs-source-dirs: hspec
   main-is:        Main.hs
   other-modules:
-    TheatreDevSpec
-    TheatreDevSpec.IO
-    TheatreDevSpec.Preferences
+    TheatreDev.ActorSpec
+    TheatreDev.ActorSpec.IO
+    TheatreDev.ActorSpec.Preferences
 
   build-depends:
     , async
