@@ -63,12 +63,12 @@ spawn Config {..} = do
                 Right newState -> go newState
                 Left exception -> do
                   try @SomeException (unmask (cleanUp state))
-                  atomically (writeTMVar resultVar (Just exception))
+                  atomically (putTMVar resultVar (Just exception))
             else do
               cleanUpResult <- try @SomeException (unmask (cleanUp state))
               case cleanUpResult of
-                Right () -> atomically (writeTMVar resultVar Nothing)
-                Left exception -> atomically (writeTMVar resultVar (Just exception))
+                Right () -> atomically (putTMVar resultVar Nothing)
+                Left exception -> atomically (putTMVar resultVar (Just exception))
      in go initialState
   return
     Daemon

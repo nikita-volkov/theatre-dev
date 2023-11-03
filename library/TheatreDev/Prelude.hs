@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-dodgy-imports #-}
 
 module TheatreDev.Prelude
   ( module Exports,
@@ -10,7 +10,6 @@ import Control.Arrow as Exports hiding (first, second)
 import Control.Category as Exports
 import Control.Concurrent as Exports
 import Control.Concurrent.STM as Exports
-import Control.Concurrent.STM.TMVar as Exports
 import Control.Exception as Exports
 import Control.Monad as Exports hiding (fail, forM, forM_, mapM, mapM_, msum, sequence, sequence_)
 import Control.Monad.Fail as Exports
