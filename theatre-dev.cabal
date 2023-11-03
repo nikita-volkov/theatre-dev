@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          theatre-dev
-version:       0.3
+version:       0.4
 category:      Concurrency, Actors
 synopsis:      Minimalistic actor library experiments
 description:
@@ -82,7 +82,10 @@ common test
 library
   import:          base
   hs-source-dirs:  library
-  exposed-modules: TheatreDev
+  exposed-modules:
+    TheatreDev.Actor
+    TheatreDev.Daemon
+
   other-modules:
     TheatreDev.ExtrasFor.List
     TheatreDev.ExtrasFor.TBQueue
@@ -104,9 +107,9 @@ test-suite hspec
   hs-source-dirs: hspec
   main-is:        Main.hs
   other-modules:
-    TheatreDevSpec
-    TheatreDevSpec.IO
-    TheatreDevSpec.Preferences
+    TheatreDev.ActorSpec
+    TheatreDev.ActorSpec.IO
+    TheatreDev.ActorSpec.Preferences
 
   build-depends:
     , async

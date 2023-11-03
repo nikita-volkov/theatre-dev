@@ -1,10 +1,10 @@
 module Main (main) where
 
 import Test.Hspec
-import TheatreDevSpec qualified
+import TheatreDev.ActorSpec qualified
 import Prelude
 
 main :: IO ()
 main =
   hspec do
-    describe "TheatreDev" TheatreDevSpec.spec
+    describe "TheatreDev.Actor" TheatreDev.ActorSpec.spec
