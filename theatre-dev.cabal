@@ -82,7 +82,10 @@ common test
 library
   import:          base
   hs-source-dirs:  library
-  exposed-modules: TheatreDev
+  exposed-modules:
+    TheatreDev
+    TheatreDev.Daemon
+
   other-modules:
     TheatreDev.ExtrasFor.List
     TheatreDev.ExtrasFor.TBQueue
