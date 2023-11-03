@@ -1,6 +1,17 @@
-module TheatreDev.Daemon where
+module TheatreDev.Daemon
+  ( Daemon,
+
+    -- * Acquisition
+    spawn,
+
+    -- * Control
+    kill,
+    wait,
+  )
+where
 
 import TheatreDev.Prelude
+import TheatreDev.Wait qualified as Wait
 
 data Config = forall state.
   Config
@@ -13,9 +24,30 @@ data Config = forall state.
 -- Think of an actor that does not process any messages and simply
 -- interrupts between each iteration to check whether it's still alive.
 data Daemon = Daemon
-  { iteratingVar :: TVar Bool,
-    resultVar :: TMVar (Maybe SomeException)
+  { -- | Kill the daemon.
+    kill :: STM (),
+    -- | Wait for the daemon to die due to error or being killed.
+    wait :: STM (Maybe SomeException)
   }
+
+instance Semigroup Daemon where
+  left <> right =
+    Daemon
+      { kill = left.kill *> right.kill,
+        wait = Wait.both left.wait right.wait
+      }
+
+instance Monoid Daemon where
+  mempty =
+    Daemon
+      { kill = return (),
+        wait = return Nothing
+      }
+  mconcat daemons =
+    Daemon
+      { kill = traverse_ (.kill) daemons,
+        wait = Wait.all (fmap (.wait) daemons)
+      }
 
 spawn :: Config -> IO Daemon
 spawn Config {..} = do
@@ -35,17 +67,20 @@ spawn Config {..} = do
             else do
               cleanUpResult <- try @SomeException (unmask (cleanUp state))
               case cleanUpResult of
-                Right () -> return ()
-                Left exception -> do
-                  atomically (writeTMVar resultVar (Just exception))
+                Right () -> atomically (writeTMVar resultVar Nothing)
+                Left exception -> atomically (writeTMVar resultVar (Just exception))
      in go initialState
-  return Daemon {..}
+  return
+    Daemon
+      { kill = writeTVar iteratingVar False,
+        wait = readTMVar resultVar
+      }
   where
 
 kill :: Daemon -> IO ()
-kill =
-  error "TODO"
+kill daemon =
+  atomically daemon.kill
 
 wait :: Daemon -> IO ()
-wait =
-  error "TODO"
+wait daemon =
+  atomically daemon.wait >>= maybe (pure ()) throwIO
