@@ -28,7 +28,7 @@ data Config = forall state.
     -- If an exception is thrown by this action,
     -- the iteration loop will stop,
     -- the 'cleanUp' action will get executed and
-    -- in all place where 'wait' is called the exception will be rethrown.
+    -- in all places where 'wait' is called the exception will be rethrown.
     iterate :: state -> IO state,
     -- | Clean up after the iteration loop is stopped.
     -- You can use that to release resources or
@@ -105,8 +105,9 @@ kill :: Daemon -> IO ()
 kill daemon =
   atomically daemon.kill
 
--- | Block waiting for the daemon to die either due to getting killed
--- or due to its iterator action throwing an exception.
+-- | Block waiting for the daemon to die and execute its 'cleanUp' action
+-- either due to getting killed
+-- or due to its 'iterate' action throwing an exception.
 -- The exception will get rethrown here.
 wait :: Daemon -> IO ()
 wait daemon =
