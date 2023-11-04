@@ -2,7 +2,7 @@ module TheatreDev.Daemon
   ( Daemon,
 
     -- * Acquisition
-    Config(..),
+    Config (..),
     spawn,
 
     -- * Control
