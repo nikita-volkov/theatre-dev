@@ -17,15 +17,14 @@ import TheatreDev.Wait qualified as Wait
 -- | Configuration of the daemon behaviour.
 data Config = forall state.
   Config
-  { 
-    -- | Initial state of the daemon.
+  { -- | Initial state of the daemon.
     initialState :: state,
     -- | Iteration action, updating the daemon's state.
     -- It gets executed in a loop,
     -- with checks of whether the daemon is still alive after each one.
     -- Killing the daemon will not interrupt the currently ongoing iteration,
     -- thus providing gracefulness guarantees.
-    -- 
+    --
     -- If an exception is thrown by this action,
     -- the iteration loop will stop,
     -- the 'cleanUp' action will get executed and
