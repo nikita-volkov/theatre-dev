@@ -2,7 +2,6 @@ module TheatreDev.Daemon
   ( Daemon,
 
     -- * Acquisition
-    Config (..),
     spawn,
 
     -- * Control
@@ -13,28 +12,6 @@ where
 
 import TheatreDev.Prelude
 import TheatreDev.Wait qualified as Wait
-
--- | Configuration of the daemon behaviour.
-data Config = forall state.
-  Config
-  { -- | Initial state of the daemon.
-    initialState :: state,
-    -- | Iteration action, updating the daemon's state.
-    -- It gets executed in a loop,
-    -- with checks of whether the daemon is still alive after each one.
-    -- Killing the daemon will not interrupt the currently ongoing iteration,
-    -- thus providing gracefulness guarantees.
-    --
-    -- If an exception is thrown by this action,
-    -- the iteration loop will stop,
-    -- the 'cleanUp' action will get executed and
-    -- in all places where 'wait' is called the exception will be rethrown.
-    iterate :: state -> IO state,
-    -- | Clean up after the iteration loop is stopped.
-    -- You can use that to release resources or
-    -- issue notifications about the daemon dying.
-    cleanUp :: state -> IO ()
-  }
 
 -- |
 -- Think of an actor that does not process any messages and simply
@@ -67,8 +44,26 @@ instance Monoid Daemon where
 
 -- | Fork a thread to run the daemon loop on
 -- returning immediately with a handle to control it.
-spawn :: Config -> IO Daemon
-spawn Config {..} = do
+spawn ::
+  -- | Initial state of the daemon.
+  state ->
+  -- | Iteration action, updating the daemon's state.
+  -- It gets executed in a loop,
+  -- with checks of whether the daemon is still alive after each one.
+  -- Killing the daemon will not interrupt the currently ongoing iteration,
+  -- thus providing gracefulness guarantees.
+  --
+  -- If an exception is thrown by this action,
+  -- the iteration loop will stop,
+  -- the 'cleanUp' action will get executed and
+  -- in all places where 'wait' is called the exception will be rethrown.
+  (state -> IO state) ->
+  -- | Clean up after the iteration loop is stopped.
+  -- You can use that to release resources or
+  -- issue notifications about the daemon dying.
+  (state -> IO ()) ->
+  IO Daemon
+spawn initialState iterate cleanUp = do
   iteratingVar <- newTVarIO True
   resultVar <- newEmptyTMVarIO
   forkIOWithUnmask $ \unmask ->
